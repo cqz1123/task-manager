@@ -4,32 +4,26 @@
  */
 
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
-import { useUserStore } from '../stores/user';
+import { useUserStore } from '@/stores/user';
 
 // 路由配置
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
-    component: () => import('../views/BoardsView.vue'),
+    component: () => import('@/views/BoardsView.vue'),
     meta: { requiresAuth: true } // 需要认证
   },
   {
-    path: '/login',
-    name: 'login',
-    component: () => import('../views/LoginView.vue'),
-    meta: { requiresAuth: false } // 不需要认证
-  },
-  {
-    path: '/register',
-    name: 'register',
-    component: () => import('../views/RegisterView.vue'),
+    path: '/auth',
+    name: 'auth',
+    component: () => import('@/views/AuthView.vue'),
     meta: { requiresAuth: false } // 不需要认证
   },
   {
     path: '/board/:id',
     name: 'boardDetail',
-    component: () => import('../views/BoardDetail.vue'),
+    component: () => import('@/views/BoardDetail.vue'),
     meta: { requiresAuth: true } // 需要认证
   },
   // 404 路由
@@ -52,10 +46,10 @@ router.beforeEach((to, from, next) => {
   
   // 如果路由需要认证，但用户未登录
   if (requiresAuth && !userStore.isAuthenticated) {
-    next('/login');
+    next('/auth');
   }
-  // 如果用户已登录，但访问登录或注册页
-  else if (!requiresAuth && userStore.isAuthenticated && (to.name === 'login' || to.name === 'register')) {
+  // 如果用户已登录，但访问认证页
+  else if (!requiresAuth && userStore.isAuthenticated && to.name === 'auth') {
     next('/');
   }
   // 其他情况，正常导航
