@@ -13,21 +13,21 @@ const { authenticate } = require('../middleware/auth');
  * 获取当前登录用户的所有看板
  * 需要认证：是
  */
-router.get('/', authenticate, getBoards);
+router.get('/boards', authenticate, getBoards);
 
 /**
  * POST /api/boards
  * 创建新看板
  * 需要认证：是
  */
-router.post('/', authenticate, createBoard);
+router.post('/boards', authenticate, createBoard);
 
 /**
  * DELETE /api/boards/:id
  * 删除看板
  * 需要认证：是
  */
-router.delete('/:id', authenticate, deleteBoard);
+router.delete('/boards/:id', authenticate, deleteBoard);
 
 // 导出路由模块
 module.exports = router;

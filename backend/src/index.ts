@@ -7,10 +7,9 @@ require('dotenv').config();
 // 导入路由
 const authRoutes = require('./routes/authRoutes');
 const boardRoutes = require('./routes/boardRoutes');
-// 暂时注释其他路由
-// const listRoutes = require('./routes/listRoutes');
-// const cardRoutes = require('./routes/cardRoutes');
-  
+const listRoutes = require('./routes/listRoutes');
+const cardRoutes = require('./routes/cardRoutes');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -23,10 +22,9 @@ app.use(express.urlencoded({ extended: true })); // URL 编码
 
 // 路由
 app.use('/api/auth', authRoutes);
-app.use('/api/boards', boardRoutes);
-// 暂时注释其他路由
-// app.use('/api/lists', listRoutes);
-// app.use('/api/cards', cardRoutes);
+app.use('/api', boardRoutes);
+app.use('/api', listRoutes);
+app.use('/api', cardRoutes);
 
 // 根路径
 app.get('/', (req: any, res: any) => {
