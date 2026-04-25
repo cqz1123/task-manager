@@ -1,7 +1,11 @@
 <template>
   <div class="boards-container">
     <!-- 导航栏 -->
-    <NavBar />
+    <NavBar>
+      <template #left>
+        <h1 class="page-title">看板管理</h1>
+      </template>
+    </NavBar>
 
     <!-- 主内容 -->
     <main class="main-content">
@@ -235,6 +239,13 @@ onMounted(() => {
   background-color: #f5f5f5;
   display: flex;
   flex-direction: column;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
 }
 
 .main-content {

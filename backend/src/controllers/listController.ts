@@ -16,9 +16,9 @@ async function getListsWithCards(req: any, res: any): Promise<void> {
     // 从路径参数中获取看板 ID
     const boardId = parseInt(req.params.boardId);
 
-    // 验证看板是否存在且属于当前用户
+    // 验证看板是否存在且属于当前用户，并获取看板信息
     const [boards] = await pool.query(
-      'SELECT id FROM boards WHERE id = ? AND owner_id = ?',
+      'SELECT id, name, color, owner_id, created_at FROM boards WHERE id = ? AND owner_id = ?',
       [boardId, userId]
     );
 
@@ -29,6 +29,8 @@ async function getListsWithCards(req: any, res: any): Promise<void> {
       });
       return;
     }
+
+    const board = boards[0];
 
     // 查询该看板下的所有列表，按 order_index 升序排列
     const [lists] = await pool.query(
@@ -74,6 +76,7 @@ async function getListsWithCards(req: any, res: any): Promise<void> {
     // 返回成功响应
     res.status(200).json({
       success: true,
+      board: board,
       boardId: boardId,
       lists: listsWithCards
     });

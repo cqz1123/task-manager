@@ -2,10 +2,14 @@
   <el-header class="navbar">
     <div class="navbar-container">
       <div class="navbar-left">
-        <router-link to="/" class="navbar-logo">
+        <router-link v-if="!$slots.default && !$slots.left" to="/" class="navbar-logo">
           <el-icon class="logo-icon"><i-ep-grid /></el-icon>
           <span>Task Manager</span>
         </router-link>
+        <template v-else>
+          <slot name="left"></slot>
+          <slot></slot>
+        </template>
       </div>
       
       <div class="navbar-right">

@@ -89,13 +89,8 @@ export const useBoardStore = defineStore('board', () => {
     
     try {
       const response = await listApi.getListsWithCards(boardId);
-      // 构建看板对象
-      currentBoard.value = {
-        id: response.boardId,
-        name: '', // 这里应该从API返回，暂时留空
-        owner_id: 0, // 这里应该从API返回，暂时留空
-        created_at: '' // 这里应该从API返回，暂时留空
-      };
+      // 使用返回的看板信息
+      currentBoard.value = response.board;
       lists.value = response.lists;
     } catch (err: any) {
       error.value = err.response?.data?.error || '获取看板详情失败';

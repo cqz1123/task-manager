@@ -65,18 +65,20 @@ const goBack = () => {
     <!-- Navigation Bar -->
     <NavBar>
       <template #left>
-        <ElButton
-          type="primary"
-          plain
-          size="small"
-          @click="goBack"
-          class="back-button"
-        >
-          ← 我的看板
-        </ElButton>
-        <h2 class="board-title">
-          {{ boardStore.currentBoard?.name || '看板详情' }}
-        </h2>
+        <div class="navbar-content">
+          <ElButton
+            type="primary"
+            plain
+            size="small"
+            @click="goBack"
+            class="back-button"
+          >
+            ← 我的看板
+          </ElButton>
+          <h2 class="board-title">
+            {{ boardStore.currentBoard?.name || '看板详情' }}
+          </h2>
+        </div>
       </template>
     </NavBar>
 
@@ -142,6 +144,32 @@ const goBack = () => {
   display: flex;
   flex-direction: column;
   background-color: #f0f2f5;
+}
+
+/* Navigation bar styles */
+.navbar-content {
+  display: flex;
+  align-items: center;
+  height: 60px;
+  line-height: 60px;
+}
+
+.back-button {
+  background-color: #0079BF !important;
+  border-color: #0079BF !important;
+  color: white !important;
+}
+
+.back-button:hover {
+  background-color: #006ba6 !important;
+  border-color: #006ba6 !important;
+}
+
+.board-title {
+  margin: 0 0 0 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
 }
 
 .main-content {

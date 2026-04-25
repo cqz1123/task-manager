@@ -2,14 +2,14 @@ import axios from './axios';
 import type { ListWithCards, List } from '../types/List';
 
 // 获取看板的所有列表，包含卡片信息
-export async function getListsWithCards(boardId: number): Promise<{ boardId: number; lists: ListWithCards[] }> {
-  const response: { boardId: number; lists: ListWithCards[] } = await axios.get(`/boards/${boardId}/lists-with-cards`);
-  return response;
+export async function getListsWithCards(boardId: number): Promise<{ board: any; boardId: number; lists: ListWithCards[] }> {
+  const response: { success: boolean; board: any; boardId: number; lists: ListWithCards[] } = await axios.get(`/boards/${boardId}/lists-with-cards`);
+  return { board: response.board, boardId: response.boardId, lists: response.lists };
 }
 
 // 创建一个新的列表
 export async function createList(boardId: number, title: string): Promise<List> {
-  const response = await axios.post('/lists', { boardId, title });
+  const response: { success: boolean; data: List } = await axios.post('/lists', { boardId, title });
   return response.data;
 }
 
