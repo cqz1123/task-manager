@@ -30,7 +30,7 @@ export interface Card {
   title: string;
   description: string | null;
   due_date: Date | null;
-  assignee_id: number | null;
+  assignee: string | null;
   order_index: number;
   created_at: Date;
   updated_at: Date;

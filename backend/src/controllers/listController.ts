@@ -45,7 +45,7 @@ async function getListsWithCards(req: any, res: any): Promise<void> {
     if (listIds.length > 0) {
       const placeholders = listIds.map(() => '?').join(',');
       const [cards] = await pool.query(
-        `SELECT id, list_id, title, description, due_date, assignee_id, order_index, created_at, updated_at 
+        `SELECT id, list_id, title, description, due_date, assignee, order_index, created_at, updated_at 
          FROM cards WHERE list_id IN (${placeholders}) ORDER BY order_index ASC`,
         listIds
       );
@@ -204,9 +204,75 @@ async function deleteList(req: any, res: any): Promise<void> {
   }
 }
 
+/**
+ * 修改列表标题
+ * 验证用户权限后更新列表标题
+ */
+async function updateList(req: any, res: any): Promise<void> {
+  try {
+    // 从请求对象中获取通过认证中间件附加的用户 ID
+    const userId = req.userId;
+    // 从路径参数中获取列表 ID
+    const listId = parseInt(req.params.listId);
+    // 从请求体中获取列表信息
+    const { title } = req.body;
+
+    // 验证必填参数
+    if (!title) {
+      res.status(400).json({
+        success: false,
+        error: '列表标题不能为空'
+      });
+      return;
+    }
+
+    // 验证列表是否存在且属于当前用户（通过关联的看板）
+    const [lists] = await pool.query(
+      `SELECT l.id FROM lists l 
+       JOIN boards b ON l.board_id = b.id 
+       WHERE l.id = ? AND b.owner_id = ?`,
+      [listId, userId]
+    );
+
+    if (lists.length === 0) {
+      res.status(404).json({
+        success: false,
+        error: '列表不存在或无权操作'
+      });
+      return;
+    }
+
+    // 更新列表标题
+    await pool.query(
+      'UPDATE lists SET title = ? WHERE id = ?',
+      [title, listId]
+    );
+
+    // 获取更新后的列表信息
+    const [updatedLists] = await pool.query(
+      'SELECT id, board_id, title, order_index, created_at FROM lists WHERE id = ?',
+      [listId]
+    );
+
+    // 返回成功响应
+    res.status(200).json({
+      success: true,
+      data: updatedLists[0]
+    });
+  } catch (error) {
+    // 数据库查询失败，返回 500 错误
+    console.error('修改列表失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '修改列表失败'
+    });
+  }
+}
+
 // 导出模块
 module.exports = {
   getListsWithCards,
   createList,
-  deleteList
+  deleteList,
+  updateList
 };

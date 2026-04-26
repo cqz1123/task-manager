@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { getBoards, createBoard, deleteBoard } = require('../controllers/boardController');
+const { getBoards, createBoard, deleteBoard, updateBoard } = require('../controllers/boardController');
 const { authenticate } = require('../middleware/auth');
 
 /**
@@ -21,6 +21,13 @@ router.get('/boards', authenticate, getBoards);
  * 需要认证：是
  */
 router.post('/boards', authenticate, createBoard);
+
+/**
+ * PUT /api/boards/:boardId
+ * 修改看板名称（可选颜色）
+ * 需要认证：是
+ */
+router.put('/boards/:boardId', authenticate, updateBoard);
 
 /**
  * DELETE /api/boards/:id

@@ -1,10 +1,16 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import type { Card } from '../types/Card';
 import { useBoardStore } from '../stores/board';
+import { Delete } from '@element-plus/icons-vue';
 import { ElPopconfirm, ElButton, ElMessage } from 'element-plus';
 
 const props = defineProps<{
   card: Card;
+}>();
+
+const emit = defineEmits<{
+  (e: 'card-click', card: Card): void;
 }>();
 
 const boardStore = useBoardStore();
@@ -17,13 +23,33 @@ const handleDelete = async () => {
     ElMessage.error('删除卡片失败');
   }
 };
+
+const handleCardClick = () => {
+  emit('card-click', props.card);
+};
+
+const formatDate = (dateStr: string | undefined | null) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+};
+
+const truncateText = (text: string | undefined | null, maxLength: number = 50) => {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+};
 </script>
 
 <template>
-  <div class="card-item">
+  <div class="card-item" @click="handleCardClick">
     <div class="card-header">
       <h4>{{ card.title }}</h4>
-      <div class="card-actions">
+      <div class="card-actions" @click.stop>
         <ElPopconfirm
           title="确定要删除这张卡片吗？"
           @confirm="handleDelete"
@@ -31,20 +57,30 @@ const handleDelete = async () => {
           <template #reference>
             <ElButton
               type="danger"
-              size="small"
+              :icon="Delete"
               circle
-              icon="Delete"
+              plain
               class="delete-button"
             />
           </template>
         </ElPopconfirm>
       </div>
     </div>
+
     <div v-if="card.description" class="card-description">
-      {{ card.description }}
+      {{ truncateText(card.description, 50) }}
     </div>
-    <div v-if="card.due_date" class="card-due-date">
-      截止日期: {{ new Date(card.due_date).toLocaleDateString() }}
+
+    <div class="card-meta">
+      <div v-if="card.due_date" class="card-due-date">
+        📅 {{ formatDate(card.due_date) }}
+      </div>
+      <div v-if="card.assignee" class="card-assignee">
+        👤 {{ card.assignee }}
+      </div>
+      <div v-if="!card.assignee" class="card-assignee">
+        👤 未指派
+      </div>
     </div>
   </div>
 </template>
@@ -92,6 +128,14 @@ const handleDelete = async () => {
 .delete-button {
   font-size: 12px;
   padding: 4px;
+  color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  background-color: transparent !important;
+}
+
+.delete-button:hover {
+  color: #fff !important;
+  background-color: #f56c6c !important;
 }
 
 .card-description {
@@ -101,10 +145,17 @@ const handleDelete = async () => {
   line-height: 1.4;
 }
 
-.card-due-date {
-  font-size: 11px;
-  color: #999;
+.card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   border-top: 1px solid #f0f0f0;
   padding-top: 8px;
+}
+
+.card-due-date,
+.card-assignee {
+  font-size: 11px;
+  color: #999;
 }
 </style>

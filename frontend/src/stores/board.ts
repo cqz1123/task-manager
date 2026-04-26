@@ -67,13 +67,41 @@ export const useBoardStore = defineStore('board', () => {
   const deleteBoard = async (boardId: number) => {
     loading.value = true;
     error.value = null;
-    
+
     try {
       await boardApi.deleteBoard(boardId);
       boards.value = boards.value.filter(board => board.id !== boardId);
     } catch (err: any) {
       error.value = err.response?.data?.error || '删除看板失败';
       console.error('删除看板失败:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  /**
+   * 修改看板名称
+   */
+  const updateBoard = async (boardId: number, boardData: { name: string; color?: string }) => {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const response = await boardApi.updateBoard(boardId, boardData);
+      // 更新看板列表中的看板
+      const boardIndex = boards.value.findIndex(board => board.id === boardId);
+      if (boardIndex !== -1) {
+        boards.value[boardIndex] = response.data;
+      }
+      // 更新当前看板
+      if (currentBoard.value?.id === boardId) {
+        currentBoard.value = response.data;
+      }
+      return response.data;
+    } catch (err: any) {
+      error.value = err.response?.data?.error || '修改看板失败';
+      console.error('修改看板失败:', err);
       throw err;
     } finally {
       loading.value = false;
@@ -131,7 +159,7 @@ export const useBoardStore = defineStore('board', () => {
   const deleteList = async (listId: number) => {
     loading.value = true;
     error.value = null;
-    
+
     try {
       await listApi.deleteList(listId);
       // 从列表中移除
@@ -139,6 +167,30 @@ export const useBoardStore = defineStore('board', () => {
     } catch (err: any) {
       error.value = err.response?.data?.error || '删除列表失败';
       console.error('删除列表失败:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  /**
+   * 修改列表标题
+   */
+  const updateList = async (listId: number, title: string) => {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const updatedList = await listApi.updateList(listId, title);
+      // 更新列表
+      const listIndex = lists.value.findIndex(list => list.id === listId);
+      if (listIndex !== -1) {
+        lists.value[listIndex]!.title = updatedList.title;
+      }
+      return updatedList;
+    } catch (err: any) {
+      error.value = err.response?.data?.error || '修改列表失败';
+      console.error('修改列表失败:', err);
       throw err;
     } finally {
       loading.value = false;
@@ -179,7 +231,7 @@ export const useBoardStore = defineStore('board', () => {
   const deleteCard = async (cardId: number) => {
     loading.value = true;
     error.value = null;
-    
+
     try {
       await cardApi.deleteCard(cardId);
       // 找到对应的列表并移除卡片
@@ -189,6 +241,37 @@ export const useBoardStore = defineStore('board', () => {
     } catch (err: any) {
       error.value = err.response?.data?.error || '删除卡片失败';
       console.error('删除卡片失败:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  /**
+   * 修改卡片
+   */
+  const updateCard = async (cardId: number, cardData: Partial<{
+    title: string;
+    description: string | null;
+    dueDate: string | null;
+    assignee: string | null;
+  }>) => {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const updatedCard = await cardApi.updateCard(cardId, cardData);
+      // 找到对应的列表并更新卡片
+      lists.value.forEach(list => {
+        const cardIndex = list.cards.findIndex((card: Card) => card.id === cardId);
+        if (cardIndex !== -1) {
+          list.cards[cardIndex] = updatedCard;
+        }
+      });
+      return updatedCard;
+    } catch (err: any) {
+      error.value = err.response?.data?.error || '修改卡片失败';
+      console.error('修改卡片失败:', err);
       throw err;
     } finally {
       loading.value = false;
@@ -213,11 +296,14 @@ export const useBoardStore = defineStore('board', () => {
     boardCount,
     fetchBoards,
     createBoard,
+    updateBoard,
     deleteBoard,
     fetchBoardDetail,
     createList,
+    updateList,
     deleteList,
     createCard,
+    updateCard,
     deleteCard,
     resetState
   };

@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { getListsWithCards, createList, deleteList } = require('../controllers/listController');
+const { getListsWithCards, createList, deleteList, updateList } = require('../controllers/listController');
 const { authenticate } = require('../middleware/auth');
 
 /**
@@ -21,6 +21,13 @@ router.get('/boards/:boardId/lists-with-cards', authenticate, getListsWithCards)
  * 需要认证：是
  */
 router.post('/lists', authenticate, createList);
+
+/**
+ * PUT /api/lists/:listId
+ * 修改列表标题
+ * 需要认证：是
+ */
+router.put('/lists/:listId', authenticate, updateList);
 
 /**
  * DELETE /api/lists/:listId

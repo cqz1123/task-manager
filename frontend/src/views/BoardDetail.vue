@@ -2,8 +2,10 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useBoardStore } from '../stores/board';
+import type { Card } from '../types/Card';
 import NavBar from '../components/NavBar.vue';
 import ListColumn from '../components/ListColumn.vue';
+import CardModal from '../components/CardModal.vue';
 import { ElButton, ElDialog, ElInput, ElMessage, ElLoading } from 'element-plus';
 
 const route = useRoute();
@@ -14,6 +16,15 @@ const boardId = ref<number>(0);
 const loading = ref(false);
 const showAddListDialog = ref(false);
 const newListTitle = ref('');
+
+// 看板名称编辑状态
+const isEditingBoardName = ref(false);
+const editingBoardName = ref('');
+const originalBoardName = ref('');
+
+// 卡片编辑状态
+const showCardModal = ref(false);
+const selectedCard = ref<Card | null>(null);
 
 onMounted(async () => {
   const id = route.params.id;
@@ -39,6 +50,51 @@ const fetchBoardData = async () => {
   }
 };
 
+// 开始编辑看板名称
+const startEditBoardName = () => {
+  if (!boardStore.currentBoard) return;
+  originalBoardName.value = boardStore.currentBoard.name;
+  editingBoardName.value = boardStore.currentBoard.name;
+  isEditingBoardName.value = true;
+};
+
+// 保存看板名称
+const saveBoardName = async () => {
+  if (!editingBoardName.value.trim()) {
+    ElMessage.warning('看板名称不能为空');
+    return;
+  }
+
+  if (editingBoardName.value.trim() === originalBoardName.value) {
+    isEditingBoardName.value = false;
+    return;
+  }
+
+  try {
+    await boardStore.updateBoard(boardId.value, { name: editingBoardName.value.trim() });
+    ElMessage.success('看板名称修改成功');
+    isEditingBoardName.value = false;
+  } catch (error) {
+    editingBoardName.value = originalBoardName.value;
+    ElMessage.error('修改看板名称失败');
+  }
+};
+
+// 取消编辑
+const cancelEditBoardName = () => {
+  editingBoardName.value = originalBoardName.value;
+  isEditingBoardName.value = false;
+};
+
+// 处理回车键
+const handleBoardNameKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter') {
+    saveBoardName();
+  } else if (event.key === 'Escape') {
+    cancelEditBoardName();
+  }
+};
+
 const handleAddList = async () => {
   if (!newListTitle.value.trim()) {
     ElMessage.warning('列表标题不能为空');
@@ -58,6 +114,23 @@ const handleAddList = async () => {
 const goBack = () => {
   router.push('/boards');
 };
+
+// 处理卡片点击
+const handleCardClick = (card: Card) => {
+  selectedCard.value = card;
+  showCardModal.value = true;
+};
+
+// 处理卡片更新
+const handleCardUpdated = () => {
+  // 卡片更新成功后可以做一些操作
+};
+
+// 关闭卡片弹窗
+const handleCardModalClose = () => {
+  showCardModal.value = false;
+  selectedCard.value = null;
+};
 </script>
 
 <template>
@@ -75,9 +148,25 @@ const goBack = () => {
           >
             ← 我的看板
           </ElButton>
-          <h2 class="board-title">
-            {{ boardStore.currentBoard?.name || '看板详情' }}
-          </h2>
+          <div class="board-title-wrapper">
+            <h2
+              v-if="!isEditingBoardName"
+              class="board-title"
+              @click="startEditBoardName"
+              title="点击修改看板名称"
+            >
+              {{ boardStore.currentBoard?.name || '看板详情' }}
+            </h2>
+            <ElInput
+              v-else
+              v-model="editingBoardName"
+              size="default"
+              class="board-name-input"
+              @keydown="(evt: Event | KeyboardEvent) => handleBoardNameKeydown(evt as KeyboardEvent)"
+              @blur="saveBoardName"
+              autofocus
+            />
+          </div>
         </div>
       </template>
     </NavBar>
@@ -98,6 +187,7 @@ const goBack = () => {
           v-for="list in boardStore.lists"
           :key="list.id"
           :list="list"
+          @card-click="handleCardClick"
         />
 
         <!-- Add List Button -->
@@ -135,6 +225,14 @@ const goBack = () => {
         </span>
       </template>
     </ElDialog>
+
+    <!-- Card Edit Modal -->
+    <CardModal
+      v-model="showCardModal"
+      :card="selectedCard"
+      @card-updated="handleCardUpdated"
+      @close="handleCardModalClose"
+    />
   </div>
 </template>
 
@@ -165,11 +263,39 @@ const goBack = () => {
   border-color: #006ba6 !important;
 }
 
+.board-title-wrapper {
+  margin-left: 16px;
+}
+
 .board-title {
-  margin: 0 0 0 16px;
+  margin: 0;
   font-size: 18px;
   font-weight: 600;
   color: white;
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.board-title:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.board-name-input {
+  width: 200px;
+}
+
+.board-name-input :deep(.el-input__wrapper) {
+  background-color: rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+  border: none;
+}
+
+.board-name-input :deep(.el-input__inner) {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .main-content {

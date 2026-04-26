@@ -56,14 +56,20 @@
             </div>
           </div>
           <div class="board-actions">
-            <el-button
-              size="small"
-              @click.stop="confirmDelete(board.id)"
-              type="danger"
-              plain
+            <ElPopconfirm
+              title="确定要删除这个看板吗？"
+              @confirm="() => boardStore.deleteBoard(board.id)"
             >
-              <el-icon><i-ep-delete /></el-icon>
-            </el-button>
+              <template #reference>
+                <ElButton
+                  type="danger"
+                  :icon="Delete"
+                  circle
+                  plain
+                  class="delete-button"
+                />
+              </template>
+            </ElPopconfirm>
           </div>
         </el-card>
       </div>
@@ -127,8 +133,8 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useBoardStore } from '@/stores/board';
 import NavBar from '@/components/NavBar.vue';
-// 图标通过 el-icon 组件的 i-ep-plus 和 i-ep-delete 形式使用，无需显式导入
-import { ElMessageBox, ElMessage } from 'element-plus';
+import { Delete } from '@element-plus/icons-vue';
+import { ElMessage } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
 
 const router = useRouter();
@@ -202,29 +208,6 @@ const handleCreate = async () => {
       // 错误已在 store 中处理
     }
   });
-};
-
-// 确认删除看板
-const confirmDelete = (boardId: number) => {
-  ElMessageBox.confirm(
-    '确定要删除这个看板吗？删除后将无法恢复。',
-    '删除看板',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  )
-    .then(async () => {
-      await boardStore.deleteBoard(boardId);
-      ElMessage({
-        type: 'success',
-        message: '看板删除成功'
-      });
-    })
-    .catch(() => {
-      // 取消删除
-    });
 };
 
 // 页面加载时获取看板列表
@@ -327,6 +310,23 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   margin-top: 12px;
+}
+
+.delete-button {
+  font-size: 12px;
+  padding: 4px;
+  color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  background-color: transparent !important;
+}
+
+.delete-button:hover {
+  color: #fff !important;
+  background-color: #f56c6c !important;
+}
+
+.board-card:hover .delete-button {
+  opacity: 1;
 }
 
 .color-picker {

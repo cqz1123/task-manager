@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { ListWithCards } from '../types/List';
-import type { CardCreateData } from '../types/Card';
+import type { Card, CardCreateData } from '../types/Card';
+import { Delete } from '@element-plus/icons-vue';
 import { useBoardStore } from '../stores/board';
 import CardItem from './CardItem.vue';
 import { ElButton, ElDialog, ElInput, ElPopconfirm, ElMessage, ElDatePicker } from 'element-plus';
@@ -12,14 +13,67 @@ const props = defineProps<{
   list: ListWithCards;
 }>();
 
+const emit = defineEmits<{
+  (e: 'card-click', card: Card): void;
+}>();
+
 const boardStore = useBoardStore();
+
+// 列表标题编辑状态
+const isEditingTitle = ref(false);
+const editingTitle = ref('');
+const originalTitle = ref('');
 
 // 添加卡片弹窗
 const showAddCardDialog = ref(false);
 const newCardTitle = ref('');
 const newCardDescription = ref('');
 const newCardDueDate = ref('');
-const newCardAssigneeId = ref<number | undefined>(undefined);
+const newCardAssignee = ref<string>('');
+
+// 开始编辑标题
+const startEditTitle = () => {
+  originalTitle.value = props.list.title;
+  editingTitle.value = props.list.title;
+  isEditingTitle.value = true;
+};
+
+// 保存标题
+const saveTitle = async () => {
+  if (!editingTitle.value.trim()) {
+    ElMessage.warning('列表标题不能为空');
+    return;
+  }
+
+  if (editingTitle.value.trim() === originalTitle.value) {
+    isEditingTitle.value = false;
+    return;
+  }
+
+  try {
+    await boardStore.updateList(props.list.id, editingTitle.value.trim());
+    ElMessage.success('列表标题修改成功');
+    isEditingTitle.value = false;
+  } catch (error) {
+    editingTitle.value = originalTitle.value;
+    ElMessage.error('修改列表标题失败');
+  }
+};
+
+// 取消编辑
+const cancelEditTitle = () => {
+  editingTitle.value = originalTitle.value;
+  isEditingTitle.value = false;
+};
+
+// 处理回车键
+const handleTitleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter') {
+    saveTitle();
+  } else if (event.key === 'Escape') {
+    cancelEditTitle();
+  }
+};
 
 const handleAddCard = async () => {
   if (!newCardTitle.value.trim()) {
@@ -33,17 +87,17 @@ const handleAddCard = async () => {
       title: newCardTitle.value.trim(),
       description: newCardDescription.value.trim() || undefined,
       dueDate: newCardDueDate.value || undefined,
-      assigneeId: newCardAssigneeId.value
+      assignee: newCardAssignee.value.trim() || undefined
     };
-    
+
     await boardStore.createCard(cardData);
     ElMessage.success('卡片创建成功');
-    
+
     // Reset form
     newCardTitle.value = '';
     newCardDescription.value = '';
     newCardDueDate.value = '';
-    newCardAssigneeId.value = undefined;
+    newCardAssignee.value = '';
     showAddCardDialog.value = false;
   } catch (error) {
     ElMessage.error('创建卡片失败');
@@ -63,7 +117,26 @@ const handleDeleteList = async () => {
 <template>
   <div class="list-column">
     <div class="list-header">
-      <h3>{{ list.title }}</h3>
+      <div class="list-title-wrapper">
+        <h3
+          v-if="!isEditingTitle"
+          class="list-title"
+          @click="startEditTitle"
+          title="点击修改标题"
+        >
+          {{ list.title }}
+        </h3>
+        <ElInput
+          v-else
+          v-model="editingTitle"
+          size="small"
+          class="title-input"
+          @keydown="handleTitleKeydown as any"
+          @blur="saveTitle"
+          ref="titleInputRef"
+          autofocus
+        />
+      </div>
       <div class="list-actions">
         <ElPopconfirm
           title="确定要删除这个列表吗？"
@@ -72,9 +145,9 @@ const handleDeleteList = async () => {
           <template #reference>
             <ElButton
               type="danger"
-              size="small"
+              :icon="Delete"
               circle
-              icon="Delete"
+              plain
               class="delete-button"
             />
           </template>
@@ -87,6 +160,7 @@ const handleDeleteList = async () => {
         v-for="card in list.cards"
         :key="card.id"
         :card="card"
+        @card-click="(card) => emit('card-click', card)"
       />
     </div>
     
@@ -136,9 +210,8 @@ const handleDeleteList = async () => {
         <div class="form-item">
           <label>指派人</label>
           <ElInput
-            v-model="newCardAssigneeId"
-            type="number"
-            placeholder="请输入用户ID"
+            v-model="newCardAssignee"
+            placeholder="请输入指派人姓名"
           />
         </div>
       </div>
@@ -175,12 +248,27 @@ const handleDeleteList = async () => {
   border-bottom: 1px solid #e0e0e0;
 }
 
-.list-header h3 {
+.list-title-wrapper {
+  flex: 1;
+  margin-right: 8px;
+}
+
+.list-title {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  flex: 1;
-  margin-right: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.list-title:hover {
+  background-color: #e0e0e0;
+}
+
+.title-input {
+  width: 100%;
 }
 
 .list-actions {
@@ -195,6 +283,18 @@ const handleDeleteList = async () => {
 .delete-button {
   font-size: 12px;
   padding: 4px;
+  color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  background-color: transparent !important;
+}
+
+.delete-button:hover {
+  color: #fff !important;
+  background-color: #f56c6c !important;
+}
+
+.list-header:hover .delete-button {
+  opacity: 1;
 }
 
 .list-cards {

@@ -5,7 +5,7 @@ export interface Card {
   title: string;
   description?: string;
   due_date?: string;
-  assignee_id?: number;
+  assignee?: string;
   order_index: number;
   created_at: string;
   updated_at: string;
@@ -17,5 +17,5 @@ export interface CardCreateData {
   title: string;
   description?: string;
   dueDate?: string;
-  assigneeId?: number;
+  assignee?: string;
 }

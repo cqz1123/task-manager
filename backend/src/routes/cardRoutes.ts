@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { createCard, deleteCard } = require('../controllers/cardController');
+const { createCard, deleteCard, updateCard } = require('../controllers/cardController');
 const { authenticate } = require('../middleware/auth');
 
 /**
@@ -14,6 +14,13 @@ const { authenticate } = require('../middleware/auth');
  * 需要认证：是
  */
 router.post('/cards', authenticate, createCard);
+
+/**
+ * PUT /api/cards/:cardId
+ * 修改卡片的所有字段（支持部分更新）
+ * 需要认证：是
+ */
+router.put('/cards/:cardId', authenticate, updateCard);
 
 /**
  * DELETE /api/cards/:cardId

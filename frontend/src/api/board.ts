@@ -8,8 +8,14 @@ export async function getBoards(): Promise<{ data: Board[] }> {
 }
 
 // 创建一个新的看板
-export async function createBoard(boardData: { name: string; color?: string }): Promise<{  data: Board }> {
+export async function createBoard(boardData: { name: string; color?: string }): Promise<{ data: Board }> {
   const response: { success: boolean; data: Board } = await axios.post('/boards', boardData);
+  return { data: response.data };
+}
+
+// 修改看板名称
+export async function updateBoard(boardId: number, boardData: { name: string; color?: string }): Promise<{ data: Board }> {
+  const response: { success: boolean; data: Board } = await axios.put(`/boards/${boardId}`, boardData);
   return { data: response.data };
 }
 

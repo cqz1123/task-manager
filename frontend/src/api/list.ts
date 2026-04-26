@@ -13,6 +13,12 @@ export async function createList(boardId: number, title: string): Promise<List> 
   return response.data;
 }
 
+// 修改列表标题
+export async function updateList(listId: number, title: string): Promise<List> {
+  const response: { success: boolean; data: List } = await axios.put(`/lists/${listId}`, { title });
+  return response.data;
+}
+
 // 删除一个列表
 export async function deleteList(listId: number): Promise<void> {
   await axios.delete(`/lists/${listId}`);
