@@ -46,7 +46,7 @@ const truncateText = (text: string | undefined | null, maxLength: number = 50) =
 </script>
 
 <template>
-  <div class="card-item" @click="handleCardClick">
+  <div class="card-item" @click="handleCardClick" :data-card-id="card.id">
     <div class="card-header">
       <h4>{{ card.title }}</h4>
       <div class="card-actions" @click.stop>

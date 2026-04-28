@@ -35,3 +35,9 @@ export interface Card {
   created_at: Date;
   updated_at: Date;
 }
+
+export interface CardPositionUpdate {
+  sourceListId?: number;
+  targetListId: number;
+  newOrder: number;
+}

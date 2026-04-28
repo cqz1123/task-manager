@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { createCard, deleteCard, updateCard } = require('../controllers/cardController');
+const { createCard, deleteCard, updateCard, updateCardPosition } = require('../controllers/cardController');
 const { authenticate } = require('../middleware/auth');
 
 /**
@@ -21,6 +21,13 @@ router.post('/cards', authenticate, createCard);
  * 需要认证：是
  */
 router.put('/cards/:cardId', authenticate, updateCard);
+
+/**
+ * PATCH /api/cards/:cardId/position
+ * 修改卡片位置（支持拖拽排序和跨列表移动）
+ * 需要认证：是
+ */
+router.patch('/cards/:cardId/position', authenticate, updateCardPosition);
 
 /**
  * DELETE /api/cards/:cardId

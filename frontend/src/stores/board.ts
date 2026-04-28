@@ -279,6 +279,136 @@ export const useBoardStore = defineStore('board', () => {
   };
 
   /**
+   * 移动卡片（支持同列表排序和跨列表移动）
+   * 使用乐观更新，先更新本地数据，再调用后端 API
+   */
+  const moveCard = async (params: {
+    cardId: number;
+    sourceListId: number;
+    targetListId: number;
+    newIndex: number;
+  }) => {
+    const { cardId, sourceListId, targetListId, newIndex } = params;
+    error.value = null;
+
+    // 备份原始数据，用于失败时回滚
+    const originalLists = JSON.parse(JSON.stringify(lists.value));
+
+    try {
+      console.log('开始移动卡片:', { cardId, sourceListId, targetListId, newIndex });
+      
+      // 检查lists.value是否存在
+      if (!lists.value || lists.value.length === 0) {
+        console.error('列表数据不存在');
+        throw new Error('列表数据不存在');
+      }
+      
+      // 打印当前所有列表及其卡片
+      console.log('当前所有列表:', lists.value.map(list => ({
+        id: list.id,
+        title: list.title,
+        cardCount: list.cards ? list.cards.length : 0,
+        cardIds: list.cards ? list.cards.map(card => card.id) : []
+      })));
+      
+      // 找到目标列表
+      const targetListIndex = lists.value.findIndex(list => list.id === targetListId);
+      console.log('目标列表索引:', targetListIndex);
+      
+      if (targetListIndex === -1) {
+        console.error('目标列表不存在:', targetListId);
+        throw new Error('目标列表不存在');
+      }
+
+      const targetList = lists.value[targetListIndex];
+      if (!targetList) {
+        console.error('目标列表不存在:', targetListId);
+        throw new Error('目标列表不存在');
+      }
+      console.log('目标列表:', { id: targetList.id, title: targetList.title, cardCount: targetList.cards ? targetList.cards.length : 0 });
+      
+      // 确保目标列表和卡片数组存在
+      if (!targetList.cards) {
+        console.error('目标列表卡片数组不存在:', targetList);
+        throw new Error('目标列表卡片数据不存在');
+      }
+
+      // 找到被移动的卡片 - 在所有列表中查找
+      let movedCard: Card | undefined;
+      let cardFound = false;
+      let foundListIndex = -1;
+      
+      console.log('在所有列表中查找卡片:', cardId);
+      for (let i = 0; i < lists.value.length; i++) {
+        const list = lists.value[i];
+        if (list && list.cards) {
+          const index = list.cards.findIndex((card: Card) => card.id === cardId);
+          if (index !== -1) {
+            [movedCard] = list.cards.splice(index, 1);
+            cardFound = true;
+            foundListIndex = i;
+            if (movedCard) {
+              console.log('找到并移除卡片:', { cardId: movedCard.id, listId: list.id, listIndex: i });
+            }
+            break;
+          }
+        }
+      }
+      
+      if (!cardFound || !movedCard) {
+        console.error('卡片不存在:', { cardId, sourceListId, targetListId });
+        // 检查是否卡片已经在目标列表中
+        const cardInTarget = targetList.cards.find((card: Card) => card.id === cardId);
+        if (cardInTarget) {
+          console.log('卡片已经在目标列表中:', { cardId, targetListId });
+          // 如果卡片已经在目标列表中，检查位置是否需要调整
+          const currentIndex = targetList.cards.findIndex((card: Card) => card.id === cardId);
+          if (currentIndex !== newIndex) {
+            // 调整位置
+            targetList.cards.splice(currentIndex, 1);
+            targetList.cards.splice(newIndex, 0, cardInTarget);
+            console.log('调整卡片在目标列表中的位置:', { cardId, oldIndex: currentIndex, newIndex });
+          } else {
+            console.log('卡片已经在目标列表的正确位置:', { cardId, targetListId, index: currentIndex });
+            return; // 不需要进一步处理
+          }
+        } else {
+          throw new Error('卡片不存在');
+        }
+      } else {
+        // 插入到目标列表
+        targetList.cards.splice(newIndex, 0, movedCard);
+        // 更新卡片的 list_id 为新列表的 ID
+        movedCard.list_id = targetListId;
+        console.log('卡片移动成功:', { cardId, sourceListId: lists.value[foundListIndex]?.id, targetListId, newIndex });
+      }
+
+      // 调用后端 API
+      console.log('调用后端 API 更新卡片位置');
+      try {
+        await cardApi.updateCardPosition(cardId, {
+          sourceListId,
+          targetListId,
+          newOrder: newIndex
+        });
+        console.log('后端 API 调用成功');
+      } catch (apiError) {
+        console.error('后端 API 调用失败:', apiError);
+        throw apiError;
+      }
+      
+      console.log('卡片移动成功');
+    } catch (err: any) {
+      // 失败时回滚到原始状态
+      console.error('移动卡片失败，回滚到原始状态:', err);
+      lists.value = originalLists;
+      error.value = err.response?.data?.error || '移动卡片失败';
+      console.error('移动卡片失败:', err);
+      throw err;
+    }
+  };
+
+  /**
    * 重置状态
    */
   const resetState = () => {
@@ -305,6 +435,7 @@ export const useBoardStore = defineStore('board', () => {
     createCard,
     updateCard,
     deleteCard,
+    moveCard,
     resetState
   };
 });

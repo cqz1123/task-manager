@@ -131,6 +131,76 @@ const handleCardModalClose = () => {
   showCardModal.value = false;
   selectedCard.value = null;
 };
+
+// 处理拖拽结束事件
+  const handleDragEnd = async (evt: any) => {
+    console.log('开始处理拖拽结束事件:', evt);
+    
+    // 从事件对象中获取拖拽信息
+    const fromElement = evt.from as HTMLElement;
+    const toElement = evt.to as HTMLElement;
+    const oldIndex = evt.oldIndex as number;
+    const newIndex = evt.newIndex as number;
+    const item = evt.item as HTMLElement;
+
+    console.log('拖拽元素信息:', {
+      fromElement: fromElement ? fromElement.outerHTML : 'null',
+      toElement: toElement ? toElement.outerHTML : 'null',
+      oldIndex,
+      newIndex,
+      item: item ? item.outerHTML : 'null'
+    });
+
+    // 获取源列表和目标列表的 ID（使用 closest 查找包含 data-list-id 的元素）
+    const fromListElement = fromElement ? fromElement.closest('[data-list-id]') as HTMLElement : null;
+    const toListElement = toElement ? toElement.closest('[data-list-id]') as HTMLElement : null;
+    const sourceListId = fromListElement ? parseInt(fromListElement.dataset.listId!) : null;
+    const targetListId = toListElement ? parseInt(toListElement.dataset.listId!) : null;
+
+    console.log('列表信息:', {
+      fromListElement: fromListElement ? fromListElement.outerHTML : 'null',
+      toListElement: toListElement ? toListElement.outerHTML : 'null',
+      sourceListId,
+      targetListId
+    });
+
+    // 获取被拖拽的卡片 ID
+    const cardId = item ? (item.dataset.cardId ? parseInt(item.dataset.cardId) : null) : null;
+
+    console.log('卡片信息:', {
+      cardId,
+      itemDataset: item ? item.dataset : 'null'
+    });
+
+    // 验证数据有效性
+    if (!sourceListId || !targetListId || !cardId) {
+      console.error('拖拽事件数据不完整:', { sourceListId, targetListId, cardId });
+      ElMessage.error('拖拽数据不完整，请重试');
+      return;
+    }
+
+    // 如果位置没有变化，不需要处理
+    if (sourceListId === targetListId && oldIndex === newIndex) {
+      console.log('位置没有变化，不需要处理');
+      return;
+    }
+
+    try {
+      console.log('调用 store 中的 moveCard 方法:', { cardId, sourceListId, targetListId, newIndex });
+      // 调用 store 中的 moveCard 方法
+      await boardStore.moveCard({
+        cardId,
+        sourceListId,
+        targetListId,
+        newIndex
+      });
+      console.log('移动卡片成功');
+    } catch (error: any) {
+      // 失败时会自动回滚，store 中已有错误处理
+      console.error('移动卡片失败:', error);
+      ElMessage.error('移动卡片失败，已恢复原位置');
+    }
+  };
 </script>
 
 <template>
@@ -188,6 +258,7 @@ const handleCardModalClose = () => {
           :key="list.id"
           :list="list"
           @card-click="handleCardClick"
+          @drag-end="handleDragEnd"
         />
 
         <!-- Add List Button -->

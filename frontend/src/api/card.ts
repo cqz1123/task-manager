@@ -22,3 +22,16 @@ export async function updateCard(cardId: number, cardData: Partial<{
 export async function deleteCard(cardId: number): Promise<void> {
   await axios.delete(`/cards/${cardId}`);
 }
+
+// 修改卡片位置（支持拖拽排序和跨列表移动）
+export async function updateCardPosition(
+  cardId: number,
+  data: {
+    sourceListId?: number;
+    targetListId: number;
+    newOrder: number;
+  }
+): Promise<Card> {
+  const response: { success: boolean; data: Card } = await axios.patch(`/cards/${cardId}/position`, data);
+  return response.data;
+}

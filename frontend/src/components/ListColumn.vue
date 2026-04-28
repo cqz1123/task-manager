@@ -7,6 +7,7 @@ import { useBoardStore } from '../stores/board';
 import CardItem from './CardItem.vue';
 import { ElButton, ElDialog, ElInput, ElPopconfirm, ElMessage, ElDatePicker } from 'element-plus';
 import { ElInput as ElTextarea } from 'element-plus';
+import draggable from 'vuedraggable';
 
 
 const props = defineProps<{
@@ -15,6 +16,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'card-click', card: Card): void;
+  (e: 'drag-end', event: any): void;
 }>();
 
 const boardStore = useBoardStore();
@@ -115,7 +117,7 @@ const handleDeleteList = async () => {
 </script>
 
 <template>
-  <div class="list-column">
+  <div class="list-column" :data-list-id="list.id">
     <div class="list-header">
       <div class="list-title-wrapper">
         <h3
@@ -154,16 +156,27 @@ const handleDeleteList = async () => {
         </ElPopconfirm>
       </div>
     </div>
-    
+
     <div class="list-cards">
-      <CardItem
-        v-for="card in list.cards"
-        :key="card.id"
-        :card="card"
-        @card-click="(card) => emit('card-click', card)"
-      />
+      <draggable
+        v-model="list.cards"
+        group="cards"
+        item-key="id"
+        :sort="true"
+        class="drag-area"
+        ghost-class="ghost-card"
+        chosen-class="chosen-card"
+        @end="$emit('drag-end', $event)"
+      >
+        <template #item="{ element: card }">
+          <CardItem
+            :card="card"
+            @card-click="(card) => emit('card-click', card)"
+          />
+        </template>
+      </draggable>
     </div>
-    
+
     <div class="list-footer">
       <ElButton
         type="primary"
@@ -302,6 +315,35 @@ const handleDeleteList = async () => {
   overflow-y: auto;
   margin-bottom: 12px;
   max-height: 400px;
+  padding: 8px;
+  transition: all 0.2s ease;
+}
+
+.list-cards:hover {
+  background-color: rgba(0, 0, 0, 0.01);
+}
+
+.drag-area {
+  min-height: 50px;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.drag-area:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* 拖拽时的样式 */
+.ghost-card {
+  opacity: 0.5;
+  background: #c8ebfb;
+  border: 1px dashed #409eff;
+}
+
+.chosen-card {
+  opacity: 0.8;
+  transform: scale(1.02);
+  transition: all 0.2s ease;
 }
 
 .list-footer {
