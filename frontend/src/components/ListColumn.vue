@@ -47,6 +47,11 @@ const saveTitle = async () => {
     return;
   }
 
+  if (editingTitle.value.length > 25) {
+    ElMessage.warning('列表标题不能超过25个字');
+    return;
+  }
+
   if (editingTitle.value.trim() === originalTitle.value) {
     isEditingTitle.value = false;
     return;
@@ -137,6 +142,9 @@ const handleDeleteList = async () => {
           @blur="saveTitle"
           ref="titleInputRef"
           autofocus
+          :maxlength="25"
+          show-word-limit
+          placeholder="最多25个字"
         />
       </div>
       <div class="list-actions">
@@ -200,7 +208,9 @@ const handleDeleteList = async () => {
           <label>标题 *</label>
           <ElInput
             v-model="newCardTitle"
-            placeholder="请输入卡片标题"
+            placeholder="请输入卡片标题（最多25个字）"
+            :maxlength="25"
+            show-word-limit
           />
         </div>
         <div class="form-item">
@@ -268,12 +278,16 @@ const handleDeleteList = async () => {
 
 .list-title {
   margin: 0;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
   transition: background-color 0.2s ease;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  line-height: 1.5;
 }
 
 .list-title:hover {
@@ -352,7 +366,8 @@ const handleDeleteList = async () => {
 
 .add-card-button {
   width: 100%;
-  font-size: 12px;
+  font-size: 14px;
+  padding: 10px 12px;
 }
 
 .dialog-form {

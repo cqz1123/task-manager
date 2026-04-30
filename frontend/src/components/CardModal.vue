@@ -44,6 +44,11 @@ const handleSubmit = async () => {
     return;
   }
 
+  if (formData.value.title.length > 25) {
+    ElMessage.warning('卡片标题不能超过25个字');
+    return;
+  }
+
   if (!props.card) {
     return;
   }
@@ -75,7 +80,9 @@ const handleSubmit = async () => {
       <ElFormItem label="标题">
         <ElInput
           v-model="formData.title"
-          placeholder="请输入卡片标题"
+          placeholder="请输入卡片标题（最多25个字）"
+          :maxlength="25"
+          show-word-limit
         />
       </ElFormItem>
 
@@ -121,5 +128,34 @@ const handleSubmit = async () => {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* 调大表单标签字体 */
+:deep(.el-form-item__label) {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 调大输入框字体 */
+:deep(.el-input__inner) {
+  font-size: 14px;
+  padding: 10px 12px;
+}
+
+/* 调大文本域字体 */
+:deep(.el-textarea__inner) {
+  font-size: 14px;
+  padding: 10px 12px;
+}
+
+/* 调大日期选择器字体 */
+:deep(.el-date-editor) {
+  font-size: 14px;
+}
+
+/* 调大按钮字体 */
+:deep(.el-button) {
+  font-size: 14px;
+  padding: 8px 16px;
 }
 </style>

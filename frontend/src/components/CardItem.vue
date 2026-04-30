@@ -29,13 +29,12 @@ const handleCardClick = () => {
 };
 
 const formatDate = (dateStr: string | undefined | null) => {
-  if (!dateStr) return '';
+  if (!dateStr) return '无截止日期';
   const date = new Date(dateStr);
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  return `${year}年${month}月${day}日`;
 };
 
 const truncateText = (text: string | undefined | null, maxLength: number = 50) => {
@@ -72,14 +71,11 @@ const truncateText = (text: string | undefined | null, maxLength: number = 50) =
     </div>
 
     <div class="card-meta">
-      <div v-if="card.due_date" class="card-due-date">
-        📅 {{ formatDate(card.due_date) }}
+      <div class="card-due-date">
+        📅 截止日期：{{ formatDate(card.due_date) }}
       </div>
-      <div v-if="card.assignee" class="card-assignee">
-        👤 {{ card.assignee }}
-      </div>
-      <div v-if="!card.assignee" class="card-assignee">
-        👤 未指派
+      <div class="card-assignee">
+        👤 执行人：{{ card.assignee || '未指派' }}
       </div>
     </div>
   </div>
@@ -89,8 +85,8 @@ const truncateText = (text: string | undefined | null, maxLength: number = 50) =
 .card-item {
   background: white;
   border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 8px;
+  padding: 14px;
+  margin-bottom: 10px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -110,10 +106,17 @@ const truncateText = (text: string | undefined | null, maxLength: number = 50) =
 
 .card-header h4 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   flex: 1;
   margin-right: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.5;
 }
 
 .card-actions {
@@ -126,8 +129,8 @@ const truncateText = (text: string | undefined | null, maxLength: number = 50) =
 }
 
 .delete-button {
-  font-size: 12px;
-  padding: 4px;
+  font-size: 14px;
+  padding: 6px;
   color: #f56c6c !important;
   border-color: #f56c6c !important;
   background-color: transparent !important;
@@ -139,10 +142,15 @@ const truncateText = (text: string | undefined | null, maxLength: number = 50) =
 }
 
 .card-description {
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 8px;
-  line-height: 1.4;
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 10px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card-meta {
@@ -155,7 +163,11 @@ const truncateText = (text: string | undefined | null, maxLength: number = 50) =
 
 .card-due-date,
 .card-assignee {
-  font-size: 11px;
-  color: #999;
+  font-size: 12px;
+  color: #888;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 </style>

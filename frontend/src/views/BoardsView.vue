@@ -91,8 +91,8 @@
         <el-form-item label="看板名称" prop="name">
           <el-input
             v-model="form.name"
-            placeholder="请输入看板名称"
-            maxlength="50"
+            placeholder="请输入看板名称（最多25个字）"
+            maxlength="25"
             show-word-limit
           />
         </el-form-item>
@@ -164,7 +164,7 @@ const colorOptions = [
 const rules = {
   name: [
     { required: true, message: '请输入看板名称', trigger: 'blur' },
-    { min: 1, max: 50, message: '看板名称长度在 1 到 50 个字符', trigger: 'blur' }
+    { min: 1, max: 25, message: '看板名称长度在 1 到 25 个字符', trigger: 'blur' }
   ],
   color: [
     { required: true, message: '请选择看板颜色', trigger: 'change' }
@@ -279,10 +279,12 @@ onMounted(() => {
 .board-card {
   cursor: pointer;
   transition: all 0.3s ease;
-  height: 120px;
+  min-height: 120px;
+  max-height: 150px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  overflow: hidden;
 }
 
 .board-card:hover {
@@ -299,6 +301,15 @@ onMounted(() => {
   font-weight: 600;
   margin: 0 0 8px 0;
   color: #333;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .board-meta {

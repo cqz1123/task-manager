@@ -65,6 +65,11 @@ const saveBoardName = async () => {
     return;
   }
 
+  if (editingBoardName.value.length > 25) {
+    ElMessage.warning('看板名称不能超过25个字');
+    return;
+  }
+
   if (editingBoardName.value.trim() === originalBoardName.value) {
     isEditingBoardName.value = false;
     return;
@@ -98,6 +103,11 @@ const handleBoardNameKeydown = (event: KeyboardEvent) => {
 const handleAddList = async () => {
   if (!newListTitle.value.trim()) {
     ElMessage.warning('列表标题不能为空');
+    return;
+  }
+
+  if (newListTitle.value.length > 25) {
+    ElMessage.warning('列表标题不能超过25个字');
     return;
   }
 
@@ -235,6 +245,9 @@ const handleCardModalClose = () => {
               @keydown="(evt: Event | KeyboardEvent) => handleBoardNameKeydown(evt as KeyboardEvent)"
               @blur="saveBoardName"
               autofocus
+              :maxlength="25"
+              show-word-limit
+              placeholder="最多25个字"
             />
           </div>
         </div>
@@ -285,7 +298,9 @@ const handleCardModalClose = () => {
           <label>列表名称 *</label>
           <ElInput
             v-model="newListTitle"
-            placeholder="请输入列表名称"
+            placeholder="请输入列表名称（最多25个字）"
+            :maxlength="25"
+            show-word-limit
           />
         </div>
       </div>
