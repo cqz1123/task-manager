@@ -58,7 +58,7 @@
           <div class="board-actions">
             <ElPopconfirm
               title="确定要删除这个看板吗？"
-              @confirm="() => boardStore.deleteBoard(board.id)"
+              @confirm="handleDeleteBoard(board.id)"
             >
               <template #reference>
                 <ElButton
@@ -67,6 +67,7 @@
                   circle
                   plain
                   class="delete-button"
+                  @click.stop
                 />
               </template>
             </ElPopconfirm>
@@ -184,6 +185,16 @@ const formatDate = (dateString: string) => {
 // 导航到看板详情
 const navigateToBoard = (boardId: number) => {
   router.push(`/board/${boardId}`);
+};
+
+// 处理删除看板
+const handleDeleteBoard = async (boardId: number) => {
+  try {
+    await boardStore.deleteBoard(boardId);
+    ElMessage.success('看板删除成功');
+  } catch (error) {
+    ElMessage.error('删除看板失败');
+  }
 };
 
 // 处理创建看板
