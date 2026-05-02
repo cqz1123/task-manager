@@ -5,7 +5,7 @@ import { useBoardStore } from '../stores/board';
 import type { Card } from '../types/Card';
 import NavBar from '../components/NavBar.vue';
 import ListColumn from '../components/ListColumn.vue';
-import CardModal from '../components/CardModal.vue';
+import CardEdit from '../components/CardEdit.vue';
 import MemberManagement from '../components/MemberManagement.vue';
 import { User, CopyDocument, Refresh } from '@element-plus/icons-vue';
 import { ElButton, ElDialog, ElInput, ElMessage, ElLoading, ElPopconfirm, ElTag } from 'element-plus';
@@ -26,7 +26,7 @@ const editingBoardName = ref('');
 const originalBoardName = ref('');
 
 // 卡片编辑状态
-const showCardModal = ref(false);
+const showCardEdit = ref(false);
 const selectedCard = ref<Card | null>(null);
 
 // 成员管理弹窗
@@ -164,7 +164,7 @@ const goBack = () => {
 // 处理卡片点击
 const handleCardClick = (card: Card) => {
   selectedCard.value = card;
-  showCardModal.value = true;
+  showCardEdit.value = true;
 };
 
 // 处理卡片更新
@@ -174,7 +174,7 @@ const handleCardUpdated = () => {
 
 // 关闭卡片弹窗
 const handleCardModalClose = () => {
-  showCardModal.value = false;
+  showCardEdit.value = false;
   selectedCard.value = null;
 };
 
@@ -460,8 +460,8 @@ const regenerateInviteCode = async () => {
     </ElDialog>
 
     <!-- Card Edit Modal -->
-    <CardModal
-      v-model="showCardModal"
+    <CardEdit
+      v-model="showCardEdit"
       :card="selectedCard"
       :readonly="isViewer"
       @card-updated="handleCardUpdated"
