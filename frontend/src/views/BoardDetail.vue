@@ -263,22 +263,6 @@ const openMemberManagement = async () => {
   }
 };
 
-// 处理删除看板
-const handleDeleteBoard = async () => {
-  if (!isOwner.value) {
-    ElMessage.warning('您没有权限删除看板');
-    return;
-  }
-
-  try {
-    await boardStore.deleteBoard(boardId.value);
-    ElMessage.success('看板删除成功');
-    router.push('/boards');
-  } catch (error) {
-    ElMessage.error('删除看板失败');
-  }
-};
-
 // 复制邀请码
 const copyInviteCode = async () => {
   const inviteCode = boardStore.currentBoard?.invite_code;
@@ -411,23 +395,7 @@ const regenerateInviteCode = async () => {
           >
             成员管理
           </ElButton>
-          <!-- 删除看板按钮（仅 owner 可见） -->
-          <ElPopconfirm
-            v-if="isOwner"
-            title="确定要删除这个看板吗？"
-            @confirm="handleDeleteBoard"
-          >
-            <template #reference>
-              <ElButton
-                type="danger"
-                size="small"
-                class="delete-board-btn"
-              >
-                删除看板
-              </ElButton>
-            </template>
-          </ElPopconfirm>
-        </div>
+          </div>
       </template>
     </NavBar>
 
@@ -624,16 +592,6 @@ const regenerateInviteCode = async () => {
 
 .member-management-btn:hover {
   background-color: #66b1ff !important;
-}
-
-.delete-board-btn {
-  background-color: rgba(245, 108, 108, 0.9) !important;
-  border-color: rgba(245, 108, 108, 0.9) !important;
-}
-
-.delete-board-btn:hover {
-  background-color: #f56c6c !important;
-  border-color: #f56c6c !important;
 }
 
 .main-content {
