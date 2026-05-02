@@ -504,30 +504,36 @@ const regenerateInviteCode = async () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.1);
+  padding: 6px 12px;
+  background: #ffffff;
   border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .invite-code-tag {
-  font-size: 12px;
+  font-size: 14px;
   font-family: monospace;
-  background: rgba(144, 202, 249, 0.2) !important;
-  color: #90CAF9 !important;
+  font-weight: 600;
+  padding: 4px 10px;
+  background: #409eff !important;
+  color: #ffffff !important;
   border: none;
+  border-radius: 4px;
+  letter-spacing: 2px;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
 
 .toggle-invite-code-btn,
 .copy-invite-code-btn {
-  color: rgba(255, 255, 255, 0.8) !important;
+  color: #409eff !important;
   font-size: 12px;
   padding: 2px 6px;
 }
 
 .toggle-invite-code-btn:hover,
 .copy-invite-code-btn:hover {
-  color: white !important;
-  background: rgba(255, 255, 255, 0.1);
+  color: #66b1ff !important;
+  background: rgba(64, 158, 255, 0.1);
 }
 
 .copy-invite-code-btn.copied {
