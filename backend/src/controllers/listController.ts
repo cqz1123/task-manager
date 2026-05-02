@@ -11,21 +11,31 @@ const pool = require('../config/database');
  */
 async function getListsWithCards(req: any, res: any): Promise<void> {
   try {
-    // 从请求对象中获取通过认证中间件附加的用户 ID
+    // 从请求对象中获取通过认证中间件附加的用户 ID 和角色
     const userId = req.userId;
+    const boardRole = req.boardRole;
     // 从路径参数中获取看板 ID
     const boardId = parseInt(req.params.boardId);
 
-    // 验证看板是否存在且属于当前用户，并获取看板信息
+    // 如果没有权限（权限中间件已验证，这里作为双重检查）
+    if (!boardRole) {
+      res.status(403).json({
+        success: false,
+        error: '无权访问该看板'
+      });
+      return;
+    }
+
+    // 获取看板信息
     const [boards] = await pool.query(
-      'SELECT id, name, color, owner_id, created_at FROM boards WHERE id = ? AND owner_id = ?',
-      [boardId, userId]
+      'SELECT id, name, color, invite_code, owner_id, created_at FROM boards WHERE id = ?',
+      [boardId]
     );
 
     if (boards.length === 0) {
       res.status(404).json({
         success: false,
-        error: '看板不存在或无权访问'
+        error: '看板不存在'
       });
       return;
     }
@@ -73,10 +83,13 @@ async function getListsWithCards(req: any, res: any): Promise<void> {
       cards: listCardsMap[list.id] || []
     }));
 
-    // 返回成功响应
+    // 返回成功响应（包含用户角色）
     res.status(200).json({
       success: true,
-      board: board,
+      board: {
+        ...board,
+        myRole: boardRole
+      },
       boardId: boardId,
       lists: listsWithCards
     });
@@ -96,10 +109,12 @@ async function getListsWithCards(req: any, res: any): Promise<void> {
  */
 async function createList(req: any, res: any): Promise<void> {
   try {
-    // 从请求对象中获取通过认证中间件附加的用户 ID
-    const userId = req.userId;
+    // 从请求对象中获取通过认证中间件附加的用户角色（权限中间件已验证）
+    const boardRole = req.boardRole;
+    // 从路径参数中获取看板 ID
+    const boardId = parseInt(req.params.boardId);
     // 从请求体中获取列表信息
-    const { boardId, title } = req.body;
+    const { title } = req.body;
 
     // 验证参数
     if (!boardId || !title) {
@@ -110,16 +125,11 @@ async function createList(req: any, res: any): Promise<void> {
       return;
     }
 
-    // 验证看板是否存在且属于当前用户
-    const [boards] = await pool.query(
-      'SELECT id FROM boards WHERE id = ? AND owner_id = ?',
-      [boardId, userId]
-    );
-
-    if (boards.length === 0) {
-      res.status(404).json({
+    // 验证权限：只有 owner 和 editor 可以创建列表
+    if (boardRole !== 'owner' && boardRole !== 'editor') {
+      res.status(403).json({
         success: false,
-        error: '看板不存在或无权操作'
+        error: '权限不足，需要编辑权限'
       });
       return;
     }
@@ -165,23 +175,16 @@ async function createList(req: any, res: any): Promise<void> {
  */
 async function deleteList(req: any, res: any): Promise<void> {
   try {
-    // 从请求对象中获取通过认证中间件附加的用户 ID
-    const userId = req.userId;
+    // 从请求对象中获取通过认证中间件附加的用户角色（权限中间件已验证）
+    const boardRole = req.boardRole;
     // 从路径参数中获取列表 ID
     const listId = parseInt(req.params.listId);
 
-    // 验证列表是否存在且属于当前用户（通过关联的看板）
-    const [lists] = await pool.query(
-      `SELECT l.id FROM lists l 
-       JOIN boards b ON l.board_id = b.id 
-       WHERE l.id = ? AND b.owner_id = ?`,
-      [listId, userId]
-    );
-
-    if (lists.length === 0) {
-      res.status(404).json({
+    // 验证权限：只有 owner 和 editor 可以删除列表
+    if (boardRole !== 'owner' && boardRole !== 'editor') {
+      res.status(403).json({
         success: false,
-        error: '列表不存在或无权操作'
+        error: '权限不足，需要编辑权限'
       });
       return;
     }
@@ -210,8 +213,8 @@ async function deleteList(req: any, res: any): Promise<void> {
  */
 async function updateList(req: any, res: any): Promise<void> {
   try {
-    // 从请求对象中获取通过认证中间件附加的用户 ID
-    const userId = req.userId;
+    // 从请求对象中获取通过认证中间件附加的用户角色（权限中间件已验证）
+    const boardRole = req.boardRole;
     // 从路径参数中获取列表 ID
     const listId = parseInt(req.params.listId);
     // 从请求体中获取列表信息
@@ -226,18 +229,11 @@ async function updateList(req: any, res: any): Promise<void> {
       return;
     }
 
-    // 验证列表是否存在且属于当前用户（通过关联的看板）
-    const [lists] = await pool.query(
-      `SELECT l.id FROM lists l 
-       JOIN boards b ON l.board_id = b.id 
-       WHERE l.id = ? AND b.owner_id = ?`,
-      [listId, userId]
-    );
-
-    if (lists.length === 0) {
-      res.status(404).json({
+    // 验证权限：只有 owner 和 editor 可以修改列表
+    if (boardRole !== 'owner' && boardRole !== 'editor') {
+      res.status(403).json({
         success: false,
-        error: '列表不存在或无权操作'
+        error: '权限不足，需要编辑权限'
       });
       return;
     }

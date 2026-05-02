@@ -7,6 +7,7 @@ import { ElPopconfirm, ElButton, ElMessage } from 'element-plus';
 
 const props = defineProps<{
   card: Card;
+  canEdit?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -48,7 +49,7 @@ const truncateText = (text: string | undefined | null, maxLength: number = 50) =
   <div class="card-item" @click="handleCardClick" :data-card-id="card.id">
     <div class="card-header">
       <h4>{{ card.title }}</h4>
-      <div class="card-actions" @click.stop>
+      <div v-if="canEdit" class="card-actions" @click.stop>
         <ElPopconfirm
           title="确定要删除这张卡片吗？"
           @confirm="handleDelete"
@@ -148,6 +149,7 @@ const truncateText = (text: string | undefined | null, maxLength: number = 50) =
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;

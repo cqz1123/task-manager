@@ -11,8 +11,8 @@ const pool = require('../config/database');
  */
 async function createCard(req: any, res: any): Promise<void> {
   try {
-    // 从请求对象中获取通过认证中间件附加的用户 ID
-    const userId = req.userId;
+    // 从请求对象中获取通过认证中间件附加的用户角色（权限中间件已验证）
+    const boardRole = req.boardRole;
     // 从请求体中获取卡片信息
     const { listId, title, description, dueDate, assignee } = req.body;
 
@@ -25,18 +25,11 @@ async function createCard(req: any, res: any): Promise<void> {
       return;
     }
 
-    // 验证列表是否存在且属于当前用户（通过关联的看板）
-    const [lists] = await pool.query(
-      `SELECT l.id FROM lists l 
-       JOIN boards b ON l.board_id = b.id 
-       WHERE l.id = ? AND b.owner_id = ?`,
-      [listId, userId]
-    );
-
-    if (lists.length === 0) {
-      res.status(404).json({
+    // 验证权限：只有 owner 和 editor 可以创建卡片
+    if (boardRole !== 'owner' && boardRole !== 'editor') {
+      res.status(403).json({
         success: false,
-        error: '列表不存在或无权操作'
+        error: '权限不足，需要编辑权限'
       });
       return;
     }
@@ -92,24 +85,16 @@ async function createCard(req: any, res: any): Promise<void> {
  */
 async function deleteCard(req: any, res: any): Promise<void> {
   try {
-    // 从请求对象中获取通过认证中间件附加的用户 ID
-    const userId = req.userId;
+    // 从请求对象中获取通过认证中间件附加的用户角色（权限中间件已验证）
+    const boardRole = req.boardRole;
     // 从路径参数中获取卡片 ID
     const cardId = parseInt(req.params.cardId);
 
-    // 验证卡片是否存在且属于当前用户（通过关联的列表和看板）
-    const [cards] = await pool.query(
-      `SELECT c.id FROM cards c 
-       JOIN lists l ON c.list_id = l.id 
-       JOIN boards b ON l.board_id = b.id 
-       WHERE c.id = ? AND b.owner_id = ?`,
-      [cardId, userId]
-    );
-
-    if (cards.length === 0) {
-      res.status(404).json({
+    // 验证权限：只有 owner 和 editor 可以删除卡片
+    if (boardRole !== 'owner' && boardRole !== 'editor') {
+      res.status(403).json({
         success: false,
-        error: '卡片不存在或无权操作'
+        error: '权限不足，需要编辑权限'
       });
       return;
     }
@@ -138,26 +123,18 @@ async function deleteCard(req: any, res: any): Promise<void> {
  */
 async function updateCard(req: any, res: any): Promise<void> {
   try {
-    // 从请求对象中获取通过认证中间件附加的用户 ID
-    const userId = req.userId;
+    // 从请求对象中获取通过认证中间件附加的用户角色（权限中间件已验证）
+    const boardRole = req.boardRole;
     // 从路径参数中获取卡片 ID
     const cardId = parseInt(req.params.cardId);
     // 从请求体中获取卡片信息
     const { title, description, dueDate, assignee } = req.body;
 
-    // 验证卡片是否存在且属于当前用户（通过关联的列表和看板）
-    const [cards] = await pool.query(
-      `SELECT c.id FROM cards c 
-       JOIN lists l ON c.list_id = l.id 
-       JOIN boards b ON l.board_id = b.id 
-       WHERE c.id = ? AND b.owner_id = ?`,
-      [cardId, userId]
-    );
-
-    if (cards.length === 0) {
-      res.status(404).json({
+    // 验证权限：只有 owner 和 editor 可以修改卡片
+    if (boardRole !== 'owner' && boardRole !== 'editor') {
+      res.status(403).json({
         success: false,
-        error: '卡片不存在或无权操作'
+        error: '权限不足，需要编辑权限'
       });
       return;
     }
@@ -241,8 +218,8 @@ async function updateCardPosition(req: any, res: any): Promise<void> {
   const connection = await pool.getConnection();
 
   try {
-    // 从请求对象中获取通过认证中间件附加的用户 ID
-    const userId = req.userId;
+    // 从请求对象中获取通过认证中间件附加的用户角色（权限中间件已验证）
+    const boardRole = req.boardRole;
     // 从路径参数中获取卡片 ID
     const cardId = parseInt(req.params.cardId);
     // 从请求体中获取移动信息
@@ -257,25 +234,34 @@ async function updateCardPosition(req: any, res: any): Promise<void> {
       return;
     }
 
+    // 验证权限：只有 owner 和 editor 可以移动卡片
+    if (boardRole !== 'owner' && boardRole !== 'editor') {
+      res.status(403).json({
+        success: false,
+        error: '权限不足，需要编辑权限'
+      });
+      return;
+    }
+
     // 开启事务
     await connection.beginTransaction();
 
-    // 验证卡片是否存在且属于当前用户（通过关联的列表和看板）
+    // 获取卡片信息
     const [cards] = await connection.query(
       `SELECT c.id, c.list_id, c.order_index, c.title, c.description, c.due_date, c.assignee, c.created_at, c.updated_at,
               l.board_id, b.owner_id
        FROM cards c
        JOIN lists l ON c.list_id = l.id
        JOIN boards b ON l.board_id = b.id
-       WHERE c.id = ? AND b.owner_id = ?`,
-      [cardId, userId]
+       WHERE c.id = ?`,
+      [cardId]
     );
 
     if (cards.length === 0) {
       await connection.rollback();
       res.status(404).json({
         success: false,
-        error: '卡片不存在或无权操作'
+        error: '卡片不存在'
       });
       return;
     }
@@ -292,7 +278,7 @@ async function updateCardPosition(req: any, res: any): Promise<void> {
        FROM lists l
        JOIN boards b ON l.board_id = b.id
        WHERE l.id = ? AND b.owner_id = ?`,
-      [actualTargetListId, userId]
+      [actualTargetListId, req.userId]
     );
 
     if (targetLists.length === 0) {

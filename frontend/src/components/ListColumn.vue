@@ -12,6 +12,8 @@ import draggable from 'vuedraggable';
 
 const props = defineProps<{
   list: ListWithCards;
+  canEdit?: boolean;
+  canDrag?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -35,6 +37,7 @@ const newCardAssignee = ref<string>('');
 
 // 开始编辑标题
 const startEditTitle = () => {
+  if (!props.canEdit) return;
   originalTitle.value = props.list.title;
   editingTitle.value = props.list.title;
   isEditingTitle.value = true;
@@ -42,6 +45,11 @@ const startEditTitle = () => {
 
 // 保存标题
 const saveTitle = async () => {
+  if (!props.canEdit) {
+    ElMessage.warning('您没有权限修改列表标题');
+    return;
+  }
+
   if (!editingTitle.value.trim()) {
     ElMessage.warning('列表标题不能为空');
     return;
@@ -58,7 +66,8 @@ const saveTitle = async () => {
   }
 
   try {
-    await boardStore.updateList(props.list.id, editingTitle.value.trim());
+    const boardId = boardStore.currentBoard?.id || 0;
+    await boardStore.updateList(boardId, props.list.id, editingTitle.value.trim());
     ElMessage.success('列表标题修改成功');
     isEditingTitle.value = false;
   } catch (error) {
@@ -83,6 +92,11 @@ const handleTitleKeydown = (event: KeyboardEvent) => {
 };
 
 const handleAddCard = async () => {
+  if (!props.canEdit) {
+    ElMessage.warning('您没有权限添加卡片');
+    return;
+  }
+
   if (!newCardTitle.value.trim()) {
     ElMessage.warning('卡片标题不能为空');
     return;
@@ -112,8 +126,14 @@ const handleAddCard = async () => {
 };
 
 const handleDeleteList = async () => {
+  if (!props.canEdit) {
+    ElMessage.warning('您没有权限删除列表');
+    return;
+  }
+
   try {
-    await boardStore.deleteList(props.list.id);
+    const boardId = boardStore.currentBoard?.id || 0;
+    await boardStore.deleteList(boardId, props.list.id);
     ElMessage.success('列表删除成功');
   } catch (error) {
     ElMessage.error('删除列表失败');
@@ -128,8 +148,9 @@ const handleDeleteList = async () => {
         <h3
           v-if="!isEditingTitle"
           class="list-title"
+          :class="{ 'clickable': canEdit }"
           @click="startEditTitle"
-          title="点击修改标题"
+          :title="canEdit ? '点击修改标题' : ''"
         >
           {{ list.title }}
         </h3>
@@ -140,14 +161,13 @@ const handleDeleteList = async () => {
           class="title-input"
           @keydown="handleTitleKeydown as any"
           @blur="saveTitle"
-          ref="titleInputRef"
           autofocus
           :maxlength="25"
           show-word-limit
           placeholder="最多25个字"
         />
       </div>
-      <div class="list-actions">
+      <div v-if="canEdit" class="list-actions">
         <ElPopconfirm
           title="确定要删除这个列表吗？"
           @confirm="handleDeleteList"
@@ -171,6 +191,7 @@ const handleDeleteList = async () => {
         group="cards"
         item-key="id"
         :sort="true"
+        :disabled="!canDrag"
         class="drag-area"
         ghost-class="ghost-card"
         chosen-class="chosen-card"
@@ -179,13 +200,14 @@ const handleDeleteList = async () => {
         <template #item="{ element: card }">
           <CardItem
             :card="card"
+            :can-edit="canEdit"
             @card-click="(card) => emit('card-click', card)"
           />
         </template>
       </draggable>
     </div>
 
-    <div class="list-footer">
+    <div v-if="canEdit" class="list-footer">
       <ElButton
         type="primary"
         plain

@@ -7,6 +7,7 @@ import { ElDialog, ElForm, ElFormItem, ElInput, ElDatePicker, ElButton, ElMessag
 const props = defineProps<{
   modelValue: boolean;
   card: Card | null;
+  readonly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -72,7 +73,7 @@ const handleSubmit = async () => {
 <template>
   <ElDialog
     :model-value="modelValue"
-    title="编辑卡片"
+    :title="readonly ? '卡片详情' : '编辑卡片'"
     width="500px"
     @close="handleClose"
   >
@@ -83,6 +84,7 @@ const handleSubmit = async () => {
           placeholder="请输入卡片标题（最多25个字）"
           :maxlength="25"
           show-word-limit
+          :disabled="readonly"
         />
       </ElFormItem>
 
@@ -92,6 +94,7 @@ const handleSubmit = async () => {
           type="textarea"
           placeholder="请输入卡片描述"
           :rows="4"
+          :disabled="readonly"
         />
       </ElFormItem>
 
@@ -103,6 +106,7 @@ const handleSubmit = async () => {
           style="width: 100%"
           format="YYYY-MM-DD"
           value-format="YYYY-MM-DD"
+          :disabled="readonly"
         />
       </ElFormItem>
 
@@ -110,14 +114,16 @@ const handleSubmit = async () => {
         <ElInput
           v-model="formData.assignee"
           placeholder="请输入执行人姓名"
+          :disabled="readonly"
         />
       </ElFormItem>
     </ElForm>
 
     <template #footer>
       <span class="dialog-footer">
-        <ElButton @click="handleClose">取消</ElButton>
-        <ElButton type="primary" @click="handleSubmit">确定</ElButton>
+        <ElButton v-if="!readonly" @click="handleClose">取消</ElButton>
+        <ElButton v-if="!readonly" type="primary" @click="handleSubmit">确定</ElButton>
+        <ElButton v-else type="primary" @click="handleClose">关闭</ElButton>
       </span>
     </template>
   </ElDialog>

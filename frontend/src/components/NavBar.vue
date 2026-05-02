@@ -13,6 +13,8 @@
       </div>
       
       <div class="navbar-right">
+        <!-- 右侧自定义内容插槽 -->
+        <slot name="right"></slot>
         <el-dropdown trigger="click" @command="handleCommand">
           <span class="navbar-user">
             <el-avatar :size="32" :src="userAvatar">{{ userName }}</el-avatar>

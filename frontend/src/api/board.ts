@@ -23,3 +23,15 @@ export async function updateBoard(boardId: number, boardData: { name: string; co
 export async function deleteBoard(boardId: number): Promise<void> {
   await axios.delete(`/boards/${boardId}`);
 }
+
+// 通过邀请码加入看板
+export async function joinBoardByCode(inviteCode: string): Promise<{ data: { board: Board; myRole: string } }> {
+  const response: { success: boolean; data: { board: Board; myRole: string } } = await axios.post('/boards/join-by-code', { inviteCode });
+  return response;
+}
+
+// 重新生成邀请码
+export async function regenerateInviteCode(boardId: number): Promise<{ data: { inviteCode: string; message: string } }> {
+  const response: { success: boolean; data: { inviteCode: string; message: string } } = await axios.post(`/boards/${boardId}/invite-code`);
+  return response;
+}

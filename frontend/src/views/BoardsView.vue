@@ -11,9 +11,14 @@
     <main class="main-content">
       <div class="boards-header">
         <h1>我的看板</h1>
-        <el-button type="primary" @click="dialogVisible = true" :loading="boardStore.loading">
-          <el-icon><i-ep-plus /></el-icon>创建新看板
-        </el-button>
+        <div class="header-actions">
+          <el-button type="success" @click="joinDialogVisible = true" :loading="boardStore.loading">
+            <el-icon><i-ep-user-plus /></el-icon>加入看板
+          </el-button>
+          <el-button type="primary" @click="dialogVisible = true" :loading="boardStore.loading">
+            <el-icon><i-ep-plus /></el-icon>创建新看板
+          </el-button>
+        </div>
       </div>
 
       <!-- 错误信息 -->
@@ -36,9 +41,14 @@
       <div v-else class="boards-grid">
         <div v-if="boardStore.boards.length === 0" class="empty-boards">
           <el-empty description="还没有看板" />
-          <el-button type="primary" @click="dialogVisible = true" style="margin-top: 20px;">
-            创建第一个看板
-          </el-button>
+          <div class="empty-actions">
+            <el-button type="primary" @click="dialogVisible = true">
+              创建第一个看板
+            </el-button>
+            <el-button type="success" @click="joinDialogVisible = true">
+              加入已有看板
+            </el-button>
+          </div>
         </div>
 
         <el-card
@@ -50,12 +60,27 @@
           :style="{ borderLeft: `4px solid ${board.color}` }"
         >
           <div class="board-content">
-            <h3 class="board-name">{{ board.name }}</h3>
+            <div class="board-header">
+              <h3 class="board-name">{{ board.name }}</h3>
+              <el-tag :type="getRoleTagType(board.myRole)" class="role-tag">
+                {{ getRoleLabel(board.myRole) }}
+              </el-tag>
+            </div>
             <div class="board-meta">
               <span class="board-date">{{ formatDate(board.created_at) }}</span>
             </div>
           </div>
           <div class="board-actions">
+            <!-- 复制邀请码按钮（仅 owner 可见） -->
+            <el-button
+              v-if="board.myRole === 'owner' && board.invite_code"
+              type="text"
+              :icon="CopyDocument"
+              circle
+              class="copy-code-btn"
+              @click.stop="copyInviteCode(board.invite_code)"
+              title="复制邀请码"
+            />
             <ElPopconfirm
               title="确定要删除这个看板吗？"
               @confirm="handleDeleteBoard(board.id)"
@@ -126,27 +151,71 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 加入看板对话框 -->
+    <el-dialog
+      v-model="joinDialogVisible"
+      title="加入看板"
+      width="400px"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="joinFormRef"
+        :model="joinForm"
+        :rules="joinRules"
+        label-position="top"
+      >
+        <el-form-item label="邀请码" prop="inviteCode">
+          <el-input
+            v-model="joinForm.inviteCode"
+            placeholder="请输入看板邀请码"
+            maxlength="6"
+            @input="joinForm.inviteCode = joinForm.inviteCode.toUpperCase()"
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="joinDialogVisible = false">取消</el-button>
+          <el-button
+            type="primary"
+            @click="handleJoinBoard"
+            :loading="boardStore.loading"
+          >
+            加入
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useBoardStore } from '@/stores/board';
 import NavBar from '@/components/NavBar.vue';
-import { Delete } from '@element-plus/icons-vue';
+import { Delete, CopyDocument } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
 
 const router = useRouter();
 const boardStore = useBoardStore();
 const dialogVisible = ref(false);
+const joinDialogVisible = ref(false);
 const formRef = ref<FormInstance>();
+const joinFormRef = ref<FormInstance>();
 
 // 表单数据
 const form = ref({
   name: '',
   color: '#0079BF'
+});
+
+// 加入看板表单
+const joinForm = ref({
+  inviteCode: ''
 });
 
 // 颜色选项
@@ -170,6 +239,42 @@ const rules = {
   color: [
     { required: true, message: '请选择看板颜色', trigger: 'change' }
   ]
+};
+
+// 加入看板表单验证规则
+const joinRules = {
+  inviteCode: [
+    { required: true, message: '请输入邀请码', trigger: 'blur' },
+    { min: 6, max: 6, message: '邀请码为6位字符', trigger: 'blur' }
+  ]
+};
+
+// 获取角色标签类型
+const getRoleTagType = (role?: string) => {
+  switch (role) {
+    case 'owner':
+      return 'danger';
+    case 'editor':
+      return 'primary';
+    case 'viewer':
+      return 'info';
+    default:
+      return 'default';
+  }
+};
+
+// 获取角色标签文本
+const getRoleLabel = (role?: string) => {
+  switch (role) {
+    case 'owner':
+      return '所有者';
+    case 'editor':
+      return '编辑者';
+    case 'viewer':
+      return '查看者';
+    default:
+      return '未知';
+  }
 };
 
 // 格式化日期
@@ -215,10 +320,44 @@ const handleCreate = async () => {
         color: '#0079BF'
       };
       formRef.value?.resetFields();
+      ElMessage.success('看板创建成功');
     } catch (error) {
-      // 错误已在 store 中处理
+      ElMessage.error('创建看板失败');
     }
   });
+};
+
+// 处理加入看板
+const handleJoinBoard = async () => {
+  if (!joinFormRef.value) return;
+
+  await joinFormRef.value.validate(async (valid) => {
+    if (!valid) return;
+
+    try {
+      // 自动转换邀请码为大写并去除空格
+      const formattedInviteCode = joinForm.value.inviteCode.trim().toUpperCase();
+      await boardStore.joinBoardByCode(formattedInviteCode);
+      joinDialogVisible.value = false;
+      joinForm.value = {
+        inviteCode: ''
+      };
+      joinFormRef.value?.resetFields();
+      ElMessage.success('加入看板成功');
+    } catch (error: any) {
+      ElMessage.error(error.response?.data?.error || '加入看板失败');
+    }
+  });
+};
+
+// 复制邀请码
+const copyInviteCode = async (inviteCode: string) => {
+  try {
+    await navigator.clipboard.writeText(inviteCode);
+    ElMessage.success('邀请码已复制到剪贴板');
+  } catch (error) {
+    ElMessage.error('复制失败，请手动复制');
+  }
 };
 
 // 页面加载时获取看板列表
@@ -264,6 +403,11 @@ onMounted(() => {
   margin: 0;
 }
 
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
 .error-alert {
   margin-bottom: 20px;
 }
@@ -287,6 +431,13 @@ onMounted(() => {
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
+.empty-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
 .board-card {
   cursor: pointer;
   transition: all 0.3s ease;
@@ -307,31 +458,50 @@ onMounted(() => {
   flex: 1;
 }
 
+.board-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
 .board-name {
   font-size: 16px;
   font-weight: 600;
-  margin: 0 0 8px 0;
+  margin: 0;
   color: #333;
   word-break: break-word;
   overflow-wrap: break-word;
   white-space: normal;
   line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.role-tag {
+  flex-shrink: 0;
 }
 
 .board-meta {
   font-size: 12px;
   color: #666;
+  margin-top: 8px;
 }
 
 .board-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   margin-top: 12px;
+}
+
+.copy-code-btn {
+  font-size: 12px;
+  padding: 4px;
+  color: #67c23a !important;
+}
+
+.copy-code-btn:hover {
+  background-color: #f0f9eb !important;
 }
 
 .delete-button {
@@ -345,10 +515,6 @@ onMounted(() => {
 .delete-button:hover {
   color: #fff !important;
   background-color: #f56c6c !important;
-}
-
-.board-card:hover .delete-button {
-  opacity: 1;
 }
 
 .color-picker {
@@ -375,8 +541,17 @@ onMounted(() => {
     gap: 12px;
   }
   
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+  
   .boards-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .empty-actions {
+    flex-direction: column;
   }
 }
 </style>

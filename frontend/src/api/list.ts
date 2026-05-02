@@ -9,17 +9,17 @@ export async function getListsWithCards(boardId: number): Promise<{ board: any; 
 
 // 创建一个新的列表
 export async function createList(boardId: number, title: string): Promise<List> {
-  const response: { success: boolean; data: List } = await axios.post('/lists', { boardId, title });
+  const response: { success: boolean; data: List } = await axios.post(`/boards/${boardId}/lists`, { title });
   return response.data;
 }
 
 // 修改列表标题
-export async function updateList(listId: number, title: string): Promise<List> {
-  const response: { success: boolean; data: List } = await axios.put(`/lists/${listId}`, { title });
+export async function updateList(boardId: number, listId: number, title: string): Promise<List> {
+  const response: { success: boolean; data: List } = await axios.put(`/boards/${boardId}/lists/${listId}`, { title });
   return response.data;
 }
 
 // 删除一个列表
-export async function deleteList(listId: number): Promise<void> {
-  await axios.delete(`/lists/${listId}`);
+export async function deleteList(boardId: number, listId: number): Promise<void> {
+  await axios.delete(`/boards/${boardId}/lists/${listId}`);
 }

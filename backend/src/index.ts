@@ -9,6 +9,7 @@ const authRoutes = require('./routes/authRoutes');
 const boardRoutes = require('./routes/boardRoutes');
 const listRoutes = require('./routes/listRoutes');
 const cardRoutes = require('./routes/cardRoutes');
+const memberRoutes = require('./routes/memberRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,6 +26,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', boardRoutes);
 app.use('/api', listRoutes);
 app.use('/api', cardRoutes);
+app.use('/api', memberRoutes);
 
 // 根路径
 app.get('/', (req: any, res: any) => {

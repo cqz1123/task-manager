@@ -8,7 +8,8 @@ import { ref, computed } from 'vue';
 import * as boardApi from '../api/board';
 import * as listApi from '../api/list';
 import * as cardApi from '../api/card';
-import type { Board, BoardWithLists } from '../types/Board';
+import * as memberApi from '../api/member';
+import type { Board, BoardWithLists, BoardMember } from '../types/Board';
 import type { List, ListWithCards } from '../types/List';
 import type { Card, CardCreateData } from '../types/Card';
 
@@ -16,7 +17,9 @@ export const useBoardStore = defineStore('board', () => {
   // 状态
   const boards = ref<Board[]>([]);
   const currentBoard = ref<Board | null>(null);
+  const currentBoardRole = ref<'owner' | 'editor' | 'viewer' | null>(null);
   const lists = ref<ListWithCards[]>([]);
+  const members = ref<BoardMember[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
 
@@ -119,10 +122,106 @@ export const useBoardStore = defineStore('board', () => {
       const response = await listApi.getListsWithCards(boardId);
       // 使用返回的看板信息
       currentBoard.value = response.board;
+      // 设置当前用户的角色
+      if (response.board && response.board.myRole) {
+        currentBoardRole.value = response.board.myRole as 'owner' | 'editor' | 'viewer';
+      } else {
+        currentBoardRole.value = null;
+      }
       lists.value = response.lists;
     } catch (err: any) {
       error.value = err.response?.data?.error || '获取看板详情失败';
       console.error('获取看板详情失败:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  /**
+   * 获取看板成员列表
+   */
+  const fetchMembers = async (boardId: number) => {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      const response = await memberApi.getBoardMembers(boardId);
+      // 合并 owner 和 members
+      const allMembers: BoardMember[] = [];
+      if (response.owner) {
+        allMembers.push(response.owner);
+      }
+      allMembers.push(...response.members);
+      members.value = allMembers;
+      return allMembers;
+    } catch (err: any) {
+      error.value = err.response?.data?.error || '获取成员列表失败';
+      console.error('获取成员列表失败:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  /**
+   * 修改成员角色
+   */
+  const updateMemberRole = async (boardId: number, userId: number, role: 'editor' | 'viewer') => {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      await memberApi.updateMemberRole(boardId, userId, role);
+      // 更新本地成员列表
+      const memberIndex = members.value.findIndex(member => member.userId === userId);
+      if (memberIndex !== -1) {
+        members.value[memberIndex]!.role = role;
+      }
+    } catch (err: any) {
+      error.value = err.response?.data?.error || '修改成员角色失败';
+      console.error('修改成员角色失败:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  /**
+   * 移除成员
+   */
+  const removeMember = async (boardId: number, userId: number) => {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      await memberApi.removeMember(boardId, userId);
+      // 从本地成员列表移除
+      members.value = members.value.filter(member => member.userId !== userId);
+    } catch (err: any) {
+      error.value = err.response?.data?.error || '移除成员失败';
+      console.error('移除成员失败:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  /**
+   * 通过邀请码加入看板
+   */
+  const joinBoardByCode = async (inviteCode: string) => {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      const response = await boardApi.joinBoardByCode(inviteCode);
+      // 更新看板列表
+      await fetchBoards();
+      return response.data;
+    } catch (err: any) {
+      error.value = err.response?.data?.error || '加入看板失败';
+      console.error('加入看板失败:', err);
       throw err;
     } finally {
       loading.value = false;
@@ -156,12 +255,12 @@ export const useBoardStore = defineStore('board', () => {
   /**
    * 删除列表
    */
-  const deleteList = async (listId: number) => {
+  const deleteList = async (boardId: number, listId: number) => {
     loading.value = true;
     error.value = null;
 
     try {
-      await listApi.deleteList(listId);
+      await listApi.deleteList(boardId, listId);
       // 从列表中移除
       lists.value = lists.value.filter(list => list.id !== listId);
     } catch (err: any) {
@@ -176,12 +275,12 @@ export const useBoardStore = defineStore('board', () => {
   /**
    * 修改列表标题
    */
-  const updateList = async (listId: number, title: string) => {
+  const updateList = async (boardId: number, listId: number, title: string) => {
     loading.value = true;
     error.value = null;
 
     try {
-      const updatedList = await listApi.updateList(listId, title);
+      const updatedList = await listApi.updateList(boardId, listId, title);
       // 更新列表
       const listIndex = lists.value.findIndex(list => list.id === listId);
       if (listIndex !== -1) {
@@ -205,7 +304,8 @@ export const useBoardStore = defineStore('board', () => {
     error.value = null;
     
     try {
-      const newCard = await cardApi.createCard(cardData);
+      const boardId = currentBoard.value?.id || 0;
+      const newCard = await cardApi.createCard(boardId, cardData);
       // 找到对应的列表并添加卡片
       const listIndex = lists.value.findIndex(list => list.id === cardData.listId);
       if (listIndex !== -1) {
@@ -233,7 +333,8 @@ export const useBoardStore = defineStore('board', () => {
     error.value = null;
 
     try {
-      await cardApi.deleteCard(cardId);
+      const boardId = currentBoard.value?.id || 0;
+      await cardApi.deleteCard(boardId, cardId);
       // 找到对应的列表并移除卡片
       lists.value.forEach(list => {
         list.cards = list.cards.filter((card: Card) => card.id !== cardId);
@@ -260,7 +361,8 @@ export const useBoardStore = defineStore('board', () => {
     error.value = null;
 
     try {
-      const updatedCard = await cardApi.updateCard(cardId, cardData);
+      const boardId = currentBoard.value?.id || 0;
+      const updatedCard = await cardApi.updateCard(boardId, cardId, cardData);
       // 找到对应的列表并更新卡片
       lists.value.forEach(list => {
         const cardIndex = list.cards.findIndex((card: Card) => card.id === cardId);
@@ -386,7 +488,8 @@ export const useBoardStore = defineStore('board', () => {
       // 调用后端 API
       console.log('调用后端 API 更新卡片位置');
       try {
-        await cardApi.updateCardPosition(cardId, {
+        const boardId = currentBoard.value?.id || 0;
+        await cardApi.updateCardPosition(boardId, cardId, {
           sourceListId,
           targetListId,
           newOrder: newIndex
@@ -413,14 +516,18 @@ export const useBoardStore = defineStore('board', () => {
    */
   const resetState = () => {
     currentBoard.value = null;
+    currentBoardRole.value = null;
     lists.value = [];
+    members.value = [];
     error.value = null;
   };
 
   return {
     boards,
     currentBoard,
+    currentBoardRole,
     lists,
+    members,
     loading,
     error,
     boardCount,
@@ -436,6 +543,10 @@ export const useBoardStore = defineStore('board', () => {
     updateCard,
     deleteCard,
     moveCard,
+    fetchMembers,
+    updateMemberRole,
+    removeMember,
+    joinBoardByCode,
     resetState
   };
 });
