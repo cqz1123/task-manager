@@ -6,6 +6,7 @@ import type { Card } from '../types/Card';
 import NavBar from '../components/NavBar.vue';
 import ListColumn from '../components/ListColumn.vue';
 import CardEdit from '../components/CardEdit.vue';
+import CardView from '../components/CardView.vue';
 import MemberManagement from '../components/MemberManagement.vue';
 import { User, CopyDocument, Refresh } from '@element-plus/icons-vue';
 import { ElButton, ElDialog, ElInput, ElMessage, ElLoading, ElPopconfirm, ElTag } from 'element-plus';
@@ -459,13 +460,20 @@ const regenerateInviteCode = async () => {
       </template>
     </ElDialog>
 
-    <!-- Card Edit Modal -->
+    <!-- Card Edit Modal (owner/editor) -->
     <CardEdit
+      v-if="!isViewer"
       v-model="showCardEdit"
       :card="selectedCard"
-      :readonly="isViewer"
       @card-updated="handleCardUpdated"
       @close="handleCardModalClose"
+    />
+
+    <!-- Card View Modal (viewer) -->
+    <CardView
+      v-if="isViewer"
+      v-model="showCardEdit"
+      :card="selectedCard"
     />
 
     <!-- Member Management Modal -->
