@@ -53,8 +53,10 @@ export const useBoardStore = defineStore('board', () => {
     
     try {
       const response = await boardApi.createBoard(boardData);
-      boards.value.unshift(response.data); // 将新看板添加到列表开头
-      return response.data;
+      // 创建者默认是所有者
+      const newBoard = { ...response.data, myRole: 'owner' as const };
+      boards.value.unshift(newBoard); // 将新看板添加到列表开头
+      return newBoard;
     } catch (err: any) {
       error.value = err.response?.data?.error || '创建看板失败';
       console.error('创建看板失败:', err);
