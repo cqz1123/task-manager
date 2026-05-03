@@ -4,6 +4,7 @@
  */
 
 const pool = require('../config/database');
+const { emitToBoard } = require('../socket/helpers');
 
 /**
  * 获取单个看板的所有列表及其卡片
@@ -154,10 +155,18 @@ async function createList(req: any, res: any): Promise<void> {
       [result.insertId]
     );
 
+    const newList = lists[0];
+    
+    // 广播列表创建事件
+    emitToBoard(boardId, 'list-created', {
+      ...newList,
+      cards: []
+    });
+
     // 返回成功响应
     res.status(201).json({
       success: true,
-      data: lists[0]
+      data: newList
     });
   } catch (error) {
     // 数据库查询失败，返回 500 错误
@@ -189,8 +198,21 @@ async function deleteList(req: any, res: any): Promise<void> {
       return;
     }
 
+    // 获取列表所属的看板 ID
+    const [lists] = await pool.query(
+      'SELECT board_id FROM lists WHERE id = ?',
+      [listId]
+    );
+    
+    const boardId = lists[0]?.board_id;
+
     // 删除列表（由于外键 ON DELETE CASCADE，其下的卡片会自动删除）
     await pool.query('DELETE FROM lists WHERE id = ?', [listId]);
+
+    // 广播列表删除事件
+    if (boardId) {
+      emitToBoard(boardId, 'list-deleted', { listId });
+    }
 
     // 返回成功响应
     res.status(200).json({
@@ -238,6 +260,13 @@ async function updateList(req: any, res: any): Promise<void> {
       return;
     }
 
+    // 获取列表所属的看板 ID
+    const [boardInfo] = await pool.query(
+      'SELECT board_id FROM lists WHERE id = ?',
+      [listId]
+    );
+    const boardId = boardInfo[0]?.board_id;
+
     // 更新列表标题
     await pool.query(
       'UPDATE lists SET title = ? WHERE id = ?',
@@ -250,10 +279,17 @@ async function updateList(req: any, res: any): Promise<void> {
       [listId]
     );
 
+    const updatedList = updatedLists[0];
+
+    // 广播列表更新事件
+    if (boardId) {
+      emitToBoard(boardId, 'list-updated', updatedList);
+    }
+
     // 返回成功响应
     res.status(200).json({
       success: true,
-      data: updatedLists[0]
+      data: updatedList
     });
   } catch (error) {
     // 数据库查询失败，返回 500 错误

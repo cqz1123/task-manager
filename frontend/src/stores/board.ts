@@ -449,6 +449,48 @@ export const useBoardStore = defineStore('board', () => {
   };
 
   /**
+   * 广播添加列表（直接更新本地数据，不调用 API）
+   */
+  const addListByBroadcast = (list: ListWithCards): void => {
+    // 确保 cards 数组存在
+    if (!list.cards) {
+      list.cards = [];
+    }
+    
+    // 根据 order_index 插入到正确位置
+    const insertIndex = lists.value.findIndex(l => l.order_index > list.order_index);
+    if (insertIndex === -1) {
+      lists.value.push(list);
+    } else {
+      lists.value.splice(insertIndex, 0, list);
+    }
+  };
+
+  /**
+   * 广播更新列表（直接更新本地数据，不调用 API）
+   */
+  const updateListByBroadcast = (updatedList: List): void => {
+    const listIndex = lists.value.findIndex(l => l.id === updatedList.id);
+    if (listIndex !== -1) {
+      lists.value[listIndex] = {
+        ...lists.value[listIndex],
+        ...updatedList,
+        cards: lists.value[listIndex]!.cards || []
+      };
+    }
+  };
+
+  /**
+   * 广播删除列表（直接更新本地数据，不调用 API）
+   */
+  const deleteListByBroadcast = (listId: number): void => {
+    const listIndex = lists.value.findIndex(l => l.id === listId);
+    if (listIndex !== -1) {
+      lists.value.splice(listIndex, 1);
+    }
+  };
+
+  /**
    * 修改卡片
    */
   const updateCard = async (cardId: number, cardData: Partial<{
@@ -647,6 +689,9 @@ export const useBoardStore = defineStore('board', () => {
     updateCardByBroadcast,
     deleteCardByBroadcast,
     moveCardByBroadcast,
+    addListByBroadcast,
+    updateListByBroadcast,
+    deleteListByBroadcast,
     fetchMembers,
     updateMemberRole,
     removeMember,

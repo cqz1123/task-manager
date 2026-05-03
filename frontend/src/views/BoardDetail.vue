@@ -3,6 +3,7 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useBoardStore } from '../stores/board';
 import type { Card } from '../types/Card';
+import type { ListWithCards, List } from '../types/List';
 import NavBar from '../components/NavBar.vue';
 import ListColumn from '../components/ListColumn.vue';
 import CardEdit from '../components/CardEdit.vue';
@@ -118,6 +119,24 @@ const setupSocket = () => {
     boardStore.moveCardByBroadcast(card);
   });
   
+  // 监听列表创建事件
+  socket.on('list-created', (list: ListWithCards) => {
+    console.log('收到列表创建事件:', list);
+    boardStore.addListByBroadcast(list);
+  });
+  
+  // 监听列表更新事件
+  socket.on('list-updated', (list: List) => {
+    console.log('收到列表更新事件:', list);
+    boardStore.updateListByBroadcast(list);
+  });
+  
+  // 监听列表删除事件
+  socket.on('list-deleted', ({ listId }: { listId: number }) => {
+    console.log('收到列表删除事件:', listId);
+    boardStore.deleteListByBroadcast(listId);
+  });
+  
   // 监听连接错误
   socket.on('connect_error', () => {
     ElMessage.warning('实时更新连接失败，请刷新页面');
@@ -132,6 +151,9 @@ const cleanupSocket = () => {
   socket.off('card-updated');
   socket.off('card-deleted');
   socket.off('card-moved');
+  socket.off('list-created');
+  socket.off('list-updated');
+  socket.off('list-deleted');
   socket.off('connect_error');
 };
 
