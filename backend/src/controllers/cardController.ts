@@ -4,6 +4,7 @@
  */
 
 const pool = require('../config/database');
+const { emitToBoard } = require('../socket/helpers');
 
 /**
  * 创建新卡片
@@ -64,6 +65,18 @@ async function createCard(req: any, res: any): Promise<void> {
       [result.insertId]
     );
 
+    // 获取 board_id
+    const [lists] = await pool.query(
+      'SELECT board_id FROM lists WHERE id = ?',
+      [listId]
+    );
+    const boardId = lists[0]?.board_id;
+
+    // 广播卡片创建事件
+    if (boardId) {
+      emitToBoard(boardId, 'card-created', cards[0]);
+    }
+
     // 返回成功响应
     res.status(201).json({
       success: true,
@@ -99,8 +112,21 @@ async function deleteCard(req: any, res: any): Promise<void> {
       return;
     }
 
+    // 获取卡片的 list_id 和 board_id
+    const [cards] = await pool.query(
+      'SELECT c.list_id, l.board_id FROM cards c JOIN lists l ON c.list_id = l.id WHERE c.id = ?',
+      [cardId]
+    );
+    
+    const boardId = cards[0]?.board_id;
+
     // 删除卡片
     await pool.query('DELETE FROM cards WHERE id = ?', [cardId]);
+
+    // 广播卡片删除事件
+    if (boardId) {
+      emitToBoard(boardId, 'card-deleted', { cardId });
+    }
 
     // 返回成功响应
     res.status(200).json({
@@ -194,6 +220,18 @@ async function updateCard(req: any, res: any): Promise<void> {
       [cardId]
     );
 
+    // 获取 board_id
+    const [lists] = await pool.query(
+      'SELECT board_id FROM lists WHERE id = ?',
+      [updatedCards[0]?.list_id]
+    );
+    const boardId = lists[0]?.board_id;
+
+    // 广播卡片更新事件
+    if (boardId) {
+      emitToBoard(boardId, 'card-updated', updatedCards[0]);
+    }
+
     // 返回成功响应
     res.status(200).json({
       success: true,
@@ -267,6 +305,7 @@ async function updateCardPosition(req: any, res: any): Promise<void> {
     }
 
     const card = cards[0];
+    const boardId = card.board_id;
     const originalListId = card.list_id;
     const originalOrder = card.order_index;
     const actualSourceListId = sourceListId !== undefined ? sourceListId : originalListId;
@@ -372,6 +411,9 @@ async function updateCardPosition(req: any, res: any): Promise<void> {
        WHERE c.id = ?`,
       [cardId]
     );
+
+    // 广播卡片移动事件
+    emitToBoard(boardId, 'card-moved', updatedCards[0]);
 
     // 返回成功响应
     res.status(200).json({

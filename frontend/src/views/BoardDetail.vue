@@ -11,6 +11,7 @@ import MemberManagement from '../components/MemberManagement.vue';
 import { User, CopyDocument, Refresh } from '@element-plus/icons-vue';
 import { ElButton, ElDialog, ElInput, ElMessage, ElLoading, ElPopconfirm, ElTag } from 'element-plus';
 import * as boardApi from '../api/board';
+import { socket, joinBoard, leaveBoard } from '../socket/socket';
 
 const route = useRoute();
 const router = useRouter();
@@ -63,12 +64,76 @@ onMounted(async () => {
   if (typeof id === 'string') {
     boardId.value = parseInt(id);
     await fetchBoardData();
+    
+    // 连接 socket 并加入看板房间
+    setupSocket();
   }
 });
 
 onBeforeUnmount(() => {
+  // 清理 socket 监听
+  cleanupSocket();
+  
+  // 离开看板房间
+  if (boardId.value) {
+    leaveBoard(boardId.value);
+  }
+  
   boardStore.resetState();
 });
+
+/**
+ * 设置 Socket.IO 监听
+ */
+const setupSocket = () => {
+  // 如果 socket 未连接，尝试连接
+  if (!socket.connected) {
+    socket.connect();
+  }
+  
+  // 加入看板房间
+  joinBoard(boardId.value);
+  
+  // 监听卡片创建事件
+  socket.on('card-created', (card: Card) => {
+    console.log('收到卡片创建事件:', card);
+    boardStore.addCardByBroadcast(card.list_id, card);
+  });
+  
+  // 监听卡片更新事件
+  socket.on('card-updated', (card: Card) => {
+    console.log('收到卡片更新事件:', card);
+    boardStore.updateCardByBroadcast(card);
+  });
+  
+  // 监听卡片删除事件
+  socket.on('card-deleted', ({ cardId }: { cardId: number }) => {
+    console.log('收到卡片删除事件:', cardId);
+    boardStore.deleteCardByBroadcast(cardId);
+  });
+  
+  // 监听卡片移动事件
+  socket.on('card-moved', (card: Card) => {
+    console.log('收到卡片移动事件:', card);
+    boardStore.moveCardByBroadcast(card);
+  });
+  
+  // 监听连接错误
+  socket.on('connect_error', () => {
+    ElMessage.warning('实时更新连接失败，请刷新页面');
+  });
+};
+
+/**
+ * 清理 Socket.IO 监听
+ */
+const cleanupSocket = () => {
+  socket.off('card-created');
+  socket.off('card-updated');
+  socket.off('card-deleted');
+  socket.off('card-moved');
+  socket.off('connect_error');
+};
 
 const fetchBoardData = async () => {
   loading.value = true;

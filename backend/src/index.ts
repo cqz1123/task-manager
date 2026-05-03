@@ -1,8 +1,14 @@
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 require('dotenv').config();
+
+// Socket.IO 相关导入
+const { Server } = require('socket.io');
+const { setIo } = require('./socket/helpers');
+const { verifyToken } = require('./utils/jwt');
 
 // 导入路由
 const authRoutes = require('./routes/authRoutes');
@@ -50,7 +56,60 @@ app.use((err: any, req: any, res: any, next: any) => {
   res.status(500).json({ error: '服务器内部错误' });
 });
 
+// 创建 HTTP 服务器
+const server = http.createServer(app);
+
+// 创建 Socket.IO 实例并配置
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
+// 初始化 Socket.IO 辅助函数
+setIo(io);
+
+// Socket.IO 身份验证中间件
+io.use((socket: any, next: any) => {
+  const token = socket.handshake.auth.token;
+  
+  if (!token) {
+    return next(new Error('未提供认证令牌'));
+  }
+  
+  try {
+    const decoded = verifyToken(token);
+    socket.data.userId = decoded.userId;
+    socket.data.username = decoded.username;
+    next();
+  } catch (error) {
+    return next(new Error('令牌验证失败'));
+  }
+});
+
+// 监听连接事件
+io.on('connection', (socket: any) => {
+  console.log(`用户 ${socket.data.userId} 已连接`);
+  
+  // 监听加入看板房间的消息
+  socket.on('join-board', (boardId: number) => {
+    const roomName = `board:${boardId}`;
+    socket.join(roomName);
+    console.log(`用户 ${socket.data.userId} 加入看板房间: ${roomName}`);
+  });
+  
+  // 监听断开连接事件
+  socket.on('disconnect', () => {
+    console.log(`用户 ${socket.data.userId} 已断开连接`);
+  });
+});
+
 // 启动服务器
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`服务器运行在 http://localhost:${PORT}`);
 });
+
+// 导出 io 实例供其他模块使用
+module.exports = { io };

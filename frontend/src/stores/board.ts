@@ -351,6 +351,104 @@ export const useBoardStore = defineStore('board', () => {
   };
 
   /**
+   * 广播添加卡片（直接更新本地数据，不调用 API）
+   */
+  const addCardByBroadcast = (listId: number, card: Card): void => {
+    const list = lists.value.find(list => list.id === listId);
+    if (!list) {
+      return;
+    }
+    
+    // 确保 cards 数组存在
+    if (!list.cards) {
+      list.cards = [];
+    }
+    
+    // 根据 order_index 插入到正确位置
+    const insertIndex = list.cards.findIndex(
+      (c: Card) => c.order_index > card.order_index
+    );
+    
+    if (insertIndex === -1) {
+      list.cards.push(card);
+    } else {
+      list.cards.splice(insertIndex, 0, card);
+    }
+  };
+
+  /**
+   * 广播更新卡片（直接更新本地数据，不调用 API）
+   */
+  const updateCardByBroadcast = (updatedCard: Card): void => {
+    lists.value.forEach(list => {
+      const cardIndex = list.cards.findIndex((card: Card) => card.id === updatedCard.id);
+      if (cardIndex !== -1) {
+        list.cards[cardIndex] = updatedCard;
+      }
+    });
+  };
+
+  /**
+   * 广播删除卡片（直接更新本地数据，不调用 API）
+   */
+  const deleteCardByBroadcast = (cardId: number): void => {
+    lists.value.forEach(list => {
+      list.cards = list.cards.filter((card: Card) => card.id !== cardId);
+    });
+  };
+
+  /**
+   * 广播移动卡片（直接更新本地数据，不调用 API）
+   */
+  const moveCardByBroadcast = (movedCard: Card): void => {
+    // 先从原列表中移除卡片
+    let removedCard: Card | null = null;
+    let originalList: ListWithCards | null = null;
+
+    for (const list of lists.value) {
+      if (!list || !list.cards) continue;
+      
+      const cardIndex = list.cards.findIndex((card: Card) => card.id === movedCard.id);
+      if (cardIndex !== -1) {
+        [removedCard] = list.cards.splice(cardIndex, 1);
+        originalList = list;
+        break;
+      }
+    }
+
+    // 如果没找到卡片，直接返回
+    if (!removedCard) {
+      return;
+    }
+
+    // 找到目标列表
+    const targetList = lists.value.find(list => list.id === movedCard.list_id);
+    if (!targetList) {
+      // 如果目标列表不存在，把卡片放回原列表
+      if (originalList && originalList.cards) {
+        originalList.cards.push(removedCard);
+      }
+      return;
+    }
+
+    // 确保目标列表的 cards 数组存在
+    if (!targetList.cards) {
+      targetList.cards = [];
+    }
+
+    // 根据 order_index 插入到正确位置
+    const insertIndex = targetList.cards.findIndex(
+      (card: Card) => card.order_index > movedCard.order_index
+    );
+
+    if (insertIndex === -1) {
+      targetList.cards.push(movedCard);
+    } else {
+      targetList.cards.splice(insertIndex, 0, movedCard);
+    }
+  };
+
+  /**
    * 修改卡片
    */
   const updateCard = async (cardId: number, cardData: Partial<{
@@ -545,6 +643,10 @@ export const useBoardStore = defineStore('board', () => {
     updateCard,
     deleteCard,
     moveCard,
+    addCardByBroadcast,
+    updateCardByBroadcast,
+    deleteCardByBroadcast,
+    moveCardByBroadcast,
     fetchMembers,
     updateMemberRole,
     removeMember,
