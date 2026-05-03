@@ -364,6 +364,13 @@ export const useBoardStore = defineStore('board', () => {
       list.cards = [];
     }
     
+    // 检查是否已存在相同 ID 的卡片（避免重复）
+    const exists = list.cards.some((c: Card) => c.id === card.id);
+    if (exists) {
+      console.log('卡片已存在，跳过广播更新:', card.id);
+      return;
+    }
+    
     // 根据 order_index 插入到正确位置
     const insertIndex = list.cards.findIndex(
       (c: Card) => c.order_index > card.order_index
@@ -452,6 +459,13 @@ export const useBoardStore = defineStore('board', () => {
    * 广播添加列表（直接更新本地数据，不调用 API）
    */
   const addListByBroadcast = (list: ListWithCards): void => {
+    // 检查是否已存在相同 ID 的列表（避免重复）
+    const exists = lists.value.some(l => l.id === list.id);
+    if (exists) {
+      console.log('列表已存在，跳过广播更新:', list.id);
+      return;
+    }
+    
     // 确保 cards 数组存在
     if (!list.cards) {
       list.cards = [];
