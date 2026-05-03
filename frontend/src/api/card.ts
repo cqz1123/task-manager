@@ -36,3 +36,15 @@ export async function updateCardPosition(
   const response: { success: boolean; data: Card } = await axios.patch(`/boards/${boardId}/cards/${cardId}/position`, data);
   return response.data;
 }
+
+// 完成卡片（移动到"已完成"列表）
+export async function completeCard(boardId: number, cardId: number): Promise<Card> {
+  const response: { success: boolean; data: Card } = await axios.post(`/boards/${boardId}/cards/${cardId}/complete`);
+  return response.data;
+}
+
+// 撤销完成卡片（移回原列表）
+export async function uncompleteCard(boardId: number, cardId: number): Promise<Card> {
+  const response: { success: boolean; data: Card } = await axios.post(`/boards/${boardId}/cards/${cardId}/uncomplete`);
+  return response.data;
+}

@@ -5,6 +5,7 @@
 
 const pool = require('../config/database');
 const { emitToBoard } = require('../socket/helpers');
+const { getOrCreateCompletedList, getCompletedList, getFirstNonSystemList } = require('../services/listService');
 
 /**
  * 创建新卡片
@@ -434,10 +435,292 @@ async function updateCardPosition(req: any, res: any): Promise<void> {
   }
 }
 
+/**
+ * 完成卡片
+ * 将卡片移动到"已完成"列表
+ */
+async function completeCard(req: any, res: any): Promise<void> {
+  const connection = await pool.getConnection();
+  
+  try {
+    // 从请求对象中获取通过认证中间件附加的用户角色
+    const boardRole = req.boardRole;
+    // 从路径参数中获取卡片 ID
+    const cardId = parseInt(req.params.cardId);
+
+    // 验证权限：只有 owner 和 editor 可以完成卡片
+    if (boardRole !== 'owner' && boardRole !== 'editor') {
+      res.status(403).json({
+        success: false,
+        error: '权限不足，需要编辑权限'
+      });
+      return;
+    }
+
+    // 开启事务
+    await connection.beginTransaction();
+
+    // a. 查询当前卡片信息
+    const [cards] = await connection.query(
+      `SELECT c.id, c.list_id, c.order_index, c.title, c.description, c.due_date, c.assignee, c.created_at, c.updated_at, c.completed_from_list_id,
+              l.board_id
+       FROM cards c
+       JOIN lists l ON c.list_id = l.id
+       WHERE c.id = ?`,
+      [cardId]
+    );
+
+    if (cards.length === 0) {
+      await connection.rollback();
+      res.status(404).json({
+        success: false,
+        error: '卡片不存在'
+      });
+      return;
+    }
+
+    const card = cards[0];
+    const boardId = card.board_id;
+    const originalListId = card.list_id;
+    const originalOrderIndex = card.order_index;
+
+    // b. 获取或创建"已完成"列表
+    const completedList = await getOrCreateCompletedList(boardId, connection);
+    const completedListId = completedList.id;
+
+    // 检查卡片是否已在已完成列表中
+    if (originalListId === completedListId) {
+      await connection.rollback();
+      res.status(400).json({
+        success: false,
+        error: '卡片已在已完成列表中'
+      });
+      return;
+    }
+
+    // c. 记录卡片当前所在的列表 ID
+    const completedFromListId = originalListId;
+
+    // d. 从原列表中删除卡片：将原列表中 order_index > 原卡片的 order_index 的卡片 order_index - 1
+    await connection.query(
+      `UPDATE cards SET order_index = order_index - 1
+       WHERE list_id = ? AND order_index > ?`,
+      [originalListId, originalOrderIndex]
+    );
+
+    // e. 计算新列表的末尾 order_index
+    const [cardCount] = await connection.query(
+      'SELECT COUNT(*) as count FROM cards WHERE list_id = ?',
+      [completedListId]
+    );
+    const newOrderIndex = cardCount[0].count;
+
+    // f. 更新卡片
+    await connection.query(
+      `UPDATE cards 
+       SET list_id = ?, order_index = ?, completed_from_list_id = ?, updated_at = NOW() 
+       WHERE id = ?`,
+      [completedListId, newOrderIndex, completedFromListId, cardId]
+    );
+
+    // g. 提交事务
+    await connection.commit();
+
+    // 获取更新后的卡片信息
+    const [updatedCards] = await pool.query(
+      `SELECT c.id, c.list_id, c.title, c.description, c.due_date, c.assignee, c.order_index, c.created_at, c.updated_at, c.completed_from_list_id
+       FROM cards c
+       WHERE c.id = ?`,
+      [cardId]
+    );
+
+    // h. 广播卡片移动事件
+    emitToBoard(boardId, 'card-moved', updatedCards[0]);
+
+    // 返回成功响应
+    res.status(200).json({
+      success: true,
+      data: updatedCards[0]
+    });
+  } catch (error) {
+    // 回滚事务
+    await connection.rollback();
+    console.error('完成卡片失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '完成卡片失败'
+    });
+  } finally {
+    // 释放连接
+    connection.release();
+  }
+}
+
+/**
+ * 撤销完成卡片
+ * 将卡片从"已完成"列表移回原列表
+ */
+async function uncompleteCard(req: any, res: any): Promise<void> {
+  const connection = await pool.getConnection();
+  
+  try {
+    // 从请求对象中获取通过认证中间件附加的用户角色
+    const boardRole = req.boardRole;
+    // 从路径参数中获取卡片 ID
+    const cardId = parseInt(req.params.cardId);
+
+    // 验证权限：只有 owner 和 editor 可以撤销完成卡片
+    if (boardRole !== 'owner' && boardRole !== 'editor') {
+      res.status(403).json({
+        success: false,
+        error: '权限不足，需要编辑权限'
+      });
+      return;
+    }
+
+    // 开启事务
+    await connection.beginTransaction();
+
+    // a. 查询卡片信息
+    const [cards] = await connection.query(
+      `SELECT c.id, c.list_id, c.order_index, c.title, c.description, c.due_date, c.assignee, c.created_at, c.updated_at, c.completed_from_list_id,
+              l.board_id
+       FROM cards c
+       JOIN lists l ON c.list_id = l.id
+       WHERE c.id = ?`,
+      [cardId]
+    );
+
+    if (cards.length === 0) {
+      await connection.rollback();
+      res.status(404).json({
+        success: false,
+        error: '卡片不存在'
+      });
+      return;
+    }
+
+    const card = cards[0];
+    const boardId = card.board_id;
+    const currentListId = card.list_id;
+    const currentOrderIndex = card.order_index;
+    const completedFromListId = card.completed_from_list_id;
+
+    // 获取"已完成"列表
+    const completedList = await getCompletedList(boardId, connection);
+    if (!completedList) {
+      await connection.rollback();
+      res.status(400).json({
+        success: false,
+        error: '已完成列表不存在'
+      });
+      return;
+    }
+
+    // 检查卡片是否在已完成列表中
+    if (currentListId !== completedList.id) {
+      await connection.rollback();
+      res.status(400).json({
+        success: false,
+        error: '卡片不在已完成列表中'
+      });
+      return;
+    }
+
+    // b. 检查 completed_from_list_id
+    if (!completedFromListId) {
+      await connection.rollback();
+      res.status(400).json({
+        success: false,
+        error: '无法撤销完成，没有记录原始列表'
+      });
+      return;
+    }
+
+    // c. 确定目标列表 ID
+    let targetListId = completedFromListId;
+    
+    // 检查目标列表是否存在
+    const [targetLists] = await connection.query(
+      'SELECT id FROM lists WHERE id = ? AND board_id = ?',
+      [completedFromListId, boardId]
+    );
+    
+    if (targetLists.length === 0) {
+      // 目标列表已被删除，查找第一个非系统列表
+      const fallbackList = await getFirstNonSystemList(boardId, connection);
+      if (!fallbackList) {
+        await connection.rollback();
+        res.status(400).json({
+          success: false,
+          error: '原始列表已删除，且没有其他可用列表'
+        });
+        return;
+      }
+      targetListId = fallbackList.id;
+    }
+
+    // d. 从已完成列表中删除卡片：将已完成列表中 order_index > 当前 order_index 的卡片 order_index - 1
+    await connection.query(
+      `UPDATE cards SET order_index = order_index - 1
+       WHERE list_id = ? AND order_index > ?`,
+      [completedList.id, currentOrderIndex]
+    );
+
+    // e. 在目标列表中添加卡片到末尾
+    const [targetCardCount] = await connection.query(
+      'SELECT COUNT(*) as count FROM cards WHERE list_id = ?',
+      [targetListId]
+    );
+    const newOrderIndex = targetCardCount[0].count;
+
+    // f. 更新卡片
+    await connection.query(
+      `UPDATE cards 
+       SET list_id = ?, order_index = ?, completed_from_list_id = NULL, updated_at = NOW() 
+       WHERE id = ?`,
+      [targetListId, newOrderIndex, cardId]
+    );
+
+    // g. 提交事务
+    await connection.commit();
+
+    // 获取更新后的卡片信息
+    const [updatedCards] = await pool.query(
+      `SELECT c.id, c.list_id, c.title, c.description, c.due_date, c.assignee, c.order_index, c.created_at, c.updated_at, c.completed_from_list_id
+       FROM cards c
+       WHERE c.id = ?`,
+      [cardId]
+    );
+
+    // h. 广播卡片移动事件
+    emitToBoard(boardId, 'card-moved', updatedCards[0]);
+
+    // 返回成功响应
+    res.status(200).json({
+      success: true,
+      data: updatedCards[0]
+    });
+  } catch (error) {
+    // 回滚事务
+    await connection.rollback();
+    console.error('撤销完成卡片失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '撤销完成卡片失败'
+    });
+  } finally {
+    // 释放连接
+    connection.release();
+  }
+}
+
 // 导出模块
 module.exports = {
   createCard,
   deleteCard,
   updateCard,
-  updateCardPosition
+  updateCardPosition,
+  completeCard,
+  uncompleteCard
 };

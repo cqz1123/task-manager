@@ -43,9 +43,9 @@ async function getListsWithCards(req: any, res: any): Promise<void> {
 
     const board = boards[0];
 
-    // 查询该看板下的所有列表，按 order_index 升序排列
+    // 查询该看板下的所有列表，按 is_system 升序（系统列表排后），再按 order_index 升序排列
     const [lists] = await pool.query(
-      'SELECT id, title, order_index, created_at FROM lists WHERE board_id = ? ORDER BY order_index ASC',
+      'SELECT id, board_id, title, order_index, is_system, created_at FROM lists WHERE board_id = ? ORDER BY is_system ASC, order_index ASC',
       [boardId]
     );
 
@@ -56,7 +56,7 @@ async function getListsWithCards(req: any, res: any): Promise<void> {
     if (listIds.length > 0) {
       const placeholders = listIds.map(() => '?').join(',');
       const [cards] = await pool.query(
-        `SELECT id, list_id, title, description, due_date, assignee, order_index, created_at, updated_at 
+        `SELECT id, list_id, title, description, due_date, assignee, order_index, created_at, updated_at, completed_from_list_id 
          FROM cards WHERE list_id IN (${placeholders}) ORDER BY order_index ASC`,
         listIds
       );
@@ -78,8 +78,10 @@ async function getListsWithCards(req: any, res: any): Promise<void> {
     // 构建嵌套结构
     const listsWithCards = lists.map((list: any) => ({
       id: list.id,
+      board_id: list.board_id,
       title: list.title,
       order_index: list.order_index,
+      is_system: list.is_system,
       created_at: list.created_at,
       cards: listCardsMap[list.id] || []
     }));

@@ -2,19 +2,25 @@
 import { ref } from 'vue';
 import type { Card } from '../types/Card';
 import { useBoardStore } from '../stores/board';
-import { Delete } from '@element-plus/icons-vue';
+import * as cardApi from '../api/card';
+import { Delete, Check, RefreshLeft } from '@element-plus/icons-vue';
 import { ElPopconfirm, ElButton, ElMessage } from 'element-plus';
 
 const props = defineProps<{
   card: Card;
   canEdit?: boolean;
+  isCompletedList?: boolean;
+  boardId?: number;
 }>();
 
 const emit = defineEmits<{
   (e: 'card-click', card: Card): void;
+  (e: 'card-completed', cardId: number): void;
+  (e: 'card-uncompleted', cardId: number): void;
 }>();
 
 const boardStore = useBoardStore();
+const loading = ref(false);
 
 const handleDelete = async () => {
   try {
@@ -22,6 +28,36 @@ const handleDelete = async () => {
     ElMessage.success('卡片删除成功');
   } catch (error) {
     ElMessage.error('删除卡片失败');
+  }
+};
+
+const handleComplete = async () => {
+  if (!props.boardId || loading.value) return;
+  
+  loading.value = true;
+  try {
+    await cardApi.completeCard(props.boardId, props.card.id);
+    ElMessage.success('卡片已完成');
+    emit('card-completed', props.card.id);
+  } catch (error) {
+    ElMessage.error('完成卡片失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleUncomplete = async () => {
+  if (!props.boardId || loading.value) return;
+  
+  loading.value = true;
+  try {
+    await cardApi.uncompleteCard(props.boardId, props.card.id);
+    ElMessage.success('已撤销完成');
+    emit('card-uncompleted', props.card.id);
+  } catch (error) {
+    ElMessage.error('撤销完成失败');
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -46,10 +82,36 @@ const truncateText = (text: string | undefined | null, maxLength: number = 50) =
 </script>
 
 <template>
-  <div class="card-item" @click="handleCardClick" :data-card-id="card.id">
+  <div class="card-item" :class="{ 'completed-card': isCompletedList }" @click="handleCardClick" :data-card-id="card.id">
     <div class="card-header">
       <h4>{{ card.title }}</h4>
       <div v-if="canEdit" class="card-actions" @click.stop>
+        <!-- 完成按钮 -->
+        <ElButton
+          v-if="!isCompletedList"
+          type="success"
+          :icon="Check"
+          circle
+          plain
+          class="complete-button"
+          :loading="loading"
+          @click="handleComplete"
+          title="完成卡片"
+        />
+        
+        <!-- 撤销完成按钮 -->
+        <ElButton
+          v-if="isCompletedList"
+          type="primary"
+          :icon="RefreshLeft"
+          circle
+          plain
+          class="uncomplete-button"
+          :loading="loading"
+          @click="handleUncomplete"
+          title="撤销完成"
+        />
+        
         <ElPopconfirm
           title="确定要删除这张卡片吗？"
           @confirm="handleDelete"
@@ -129,6 +191,32 @@ const truncateText = (text: string | undefined | null, maxLength: number = 50) =
   opacity: 1;
 }
 
+.complete-button {
+  font-size: 14px;
+  padding: 6px;
+  color: #67c23a !important;
+  border-color: #67c23a !important;
+  background-color: transparent !important;
+}
+
+.complete-button:hover {
+  color: #fff !important;
+  background-color: #67c23a !important;
+}
+
+.uncomplete-button {
+  font-size: 14px;
+  padding: 6px;
+  color: #409eff !important;
+  border-color: #409eff !important;
+  background-color: transparent !important;
+}
+
+.uncomplete-button:hover {
+  color: #fff !important;
+  background-color: #409eff !important;
+}
+
 .delete-button {
   font-size: 14px;
   padding: 6px;
@@ -140,6 +228,21 @@ const truncateText = (text: string | undefined | null, maxLength: number = 50) =
 .delete-button:hover {
   color: #fff !important;
   background-color: #f56c6c !important;
+}
+
+.completed-card {
+  background: #f0f9ff !important;
+  border: 1px solid #b3d9e8 !important;
+  opacity: 0.85;
+}
+
+.completed-card h4 {
+  text-decoration: line-through;
+  color: #888;
+}
+
+.completed-card .card-description {
+  color: #888;
 }
 
 .card-description {

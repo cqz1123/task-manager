@@ -60,6 +60,19 @@ const canAddList = computed(() => !isViewer.value);
 // 是否可以拖拽（owner 和 editor）
 const canDrag = computed(() => !isViewer.value);
 
+// 排序后的列表：普通列表按 order_index 升序，系统列表（is_system=1）放到最后
+const sortedLists = computed(() => {
+  const lists = [...boardStore.lists];
+  return lists.sort((a, b) => {
+    // 首先按 is_system 排序，系统列表排后
+    if ((a as any).is_system !== (b as any).is_system) {
+      return ((a as any).is_system || 0) - ((b as any).is_system || 0);
+    }
+    // 同类型列表按 order_index 升序
+    return (a.order_index || 0) - (b.order_index || 0);
+  });
+});
+
 onMounted(async () => {
   const id = route.params.id;
   if (typeof id === 'string') {
@@ -500,11 +513,13 @@ const regenerateInviteCode = async () => {
       <div v-else class="lists-container">
         <!-- Existing Lists -->
         <ListColumn
-          v-for="list in boardStore.lists"
+          v-for="list in sortedLists"
           :key="list.id"
           :list="list"
           :can-edit="!isViewer"
           :can-drag="canDrag"
+          :is-completed-list="!!(list as any).is_system"
+          :board-id="boardId"
           @card-click="handleCardClick"
           @drag-end="handleDragEnd"
         />

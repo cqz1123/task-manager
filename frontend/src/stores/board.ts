@@ -239,11 +239,7 @@ export const useBoardStore = defineStore('board', () => {
     
     try {
       const newList = await listApi.createList(boardId, title);
-      // 添加到列表中
-      lists.value.push({
-        ...newList,
-        cards: []
-      });
+      // 不直接添加到本地列表，等待广播事件更新（避免重复）
       return newList;
     } catch (err: any) {
       error.value = err.response?.data?.error || '创建列表失败';
@@ -308,15 +304,7 @@ export const useBoardStore = defineStore('board', () => {
     try {
       const boardId = currentBoard.value?.id || 0;
       const newCard = await cardApi.createCard(boardId, cardData);
-      // 找到对应的列表并添加卡片
-      const listIndex = lists.value.findIndex(list => list.id === cardData.listId);
-      if (listIndex !== -1) {
-        if (lists.value[listIndex]?.cards) {
-          lists.value[listIndex].cards.push(newCard);
-        } else {
-          lists.value[listIndex]!.cards = [newCard];
-        }
-      }
+      // 不直接添加到本地列表，等待广播事件更新（避免重复）
       return newCard;
     } catch (err: any) {
       error.value = err.response?.data?.error || '创建卡片失败';

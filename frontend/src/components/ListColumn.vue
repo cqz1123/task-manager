@@ -14,6 +14,8 @@ const props = defineProps<{
   list: ListWithCards;
   canEdit?: boolean;
   canDrag?: boolean;
+  isCompletedList?: boolean;
+  boardId?: number;
 }>();
 
 const emit = defineEmits<{
@@ -201,6 +203,8 @@ const handleDeleteList = async () => {
           <CardItem
             :card="card"
             :can-edit="canEdit"
+            :is-completed-list="isCompletedList"
+            :board-id="boardId"
             @card-click="(card) => emit('card-click', card)"
           />
         </template>

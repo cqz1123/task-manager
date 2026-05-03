@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { createCard, deleteCard, updateCard, updateCardPosition } = require('../controllers/cardController');
+const { createCard, deleteCard, updateCard, updateCardPosition, completeCard, uncompleteCard } = require('../controllers/cardController');
 const { authenticate } = require('../middleware/auth');
 const { checkBoardRole } = require('../middleware/boardRole');
 
@@ -40,6 +40,22 @@ router.patch('/boards/:boardId/cards/:cardId/position', authenticate, checkBoard
  * 需要权限：editor（编辑权限）
  */
 router.delete('/boards/:boardId/cards/:cardId', authenticate, checkBoardRole('editor'), deleteCard);
+
+/**
+ * POST /api/boards/:boardId/cards/:cardId/complete
+ * 完成卡片（移动到"已完成"列表）
+ * 需要认证：是
+ * 需要权限：editor（编辑权限）
+ */
+router.post('/boards/:boardId/cards/:cardId/complete', authenticate, checkBoardRole('editor'), completeCard);
+
+/**
+ * POST /api/boards/:boardId/cards/:cardId/uncomplete
+ * 撤销完成卡片（移回原列表）
+ * 需要认证：是
+ * 需要权限：editor（编辑权限）
+ */
+router.post('/boards/:boardId/cards/:cardId/uncomplete', authenticate, checkBoardRole('editor'), uncompleteCard);
 
 // 导出路由模块
 module.exports = router;
