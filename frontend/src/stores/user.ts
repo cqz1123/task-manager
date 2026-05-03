@@ -7,6 +7,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { User } from '../api/auth';
 import { login, register, getCurrentUser } from '../api/auth';
+import { updateProfile } from '../api/user';
 
 // 定义用户存储
 export const useUserStore = defineStore('user', () => {
@@ -111,6 +112,28 @@ export const useUserStore = defineStore('user', () => {
     }
   };
 
+  /**
+   * 更新用户资料（用户名）
+   * @param data - { username: string }
+   */
+  const updateUserProfile = async (data: { username: string }) => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const response = await updateProfile(data);
+      if (response.data && response.data.success) {
+        user.value = response.data.user;
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        return response;
+      }
+    } catch (err: any) {
+      error.value = err.response?.data?.error || '更新失败';
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   // 初始化
   initUser();
 
@@ -123,6 +146,7 @@ export const useUserStore = defineStore('user', () => {
     loginUser,
     registerUser,
     logout,
-    refreshUser
+    refreshUser,
+    updateUserProfile
   };
 });

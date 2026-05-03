@@ -23,8 +23,9 @@
           </span>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="profile">个人资料</el-dropdown-item>
-              <el-dropdown-item command="settings">设置</el-dropdown-item>
+              <el-dropdown-item command="settings">
+                <el-icon class="mr-2"><i-ep-user /></el-icon>个人设置
+              </el-dropdown-item>
               <el-dropdown-item command="logout" divided>
                 <el-icon class="mr-2"><i-ep-switch-button /></el-icon>退出登录
               </el-dropdown-item>
@@ -33,17 +34,27 @@
         </el-dropdown>
       </div>
     </div>
+    
+    <!-- 个人设置弹窗 -->
+    <UserSettings
+      v-model="showSettingsModal"
+      @password-updated="handlePasswordUpdated"
+    />
   </el-header>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
+import UserSettings from './UserSettings.vue';
 // 图标组件通过 unplugin-icons 自动导入，无需手动导入
 
 const router = useRouter();
 const userStore = useUserStore();
+
+// 弹窗状态
+const showSettingsModal = ref(false);
 
 const userName = computed(() => {
   return userStore.user?.username?.charAt(0).toUpperCase() || 'U';
@@ -58,13 +69,16 @@ const handleCommand = (command: string) => {
   if (command === 'logout') {
     userStore.logout();
     router.push('/auth');
-  } else if (command === 'profile') {
-    // 跳转到个人资料页
-    console.log('跳转到个人资料页');
   } else if (command === 'settings') {
-    // 跳转到设置页
-    console.log('跳转到设置页');
+    // 打开个人设置弹窗
+    showSettingsModal.value = true;
   }
+};
+
+// 密码修改成功后的处理（可选：退出登录要求重新登录）
+const handlePasswordUpdated = () => {
+  // 可以选择让用户重新登录
+  // ElMessage.info('请重新登录');
 };
 </script>
 
