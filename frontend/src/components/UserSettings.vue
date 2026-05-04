@@ -76,19 +76,19 @@ const handleSaveUsername = async () => {
  return;
  }
  try {
- const response = await updateProfile({ username: usernameForm.value.username.trim() });
- if (response.data.success) {
- // 更新 store 中的用户信息
- userStore.user = response.data.user;
- localStorage.setItem('user', JSON.stringify(response.data.user));
- ElMessage.success('用户名修改成功');
- emit('profile-updated');
- }
- }
- catch (error: any) {
- const errorMessage = error.error || '修改用户名失败';
- ElMessage.error(errorMessage);
- }
+    const response = await updateProfile({ username: usernameForm.value.username.trim() });
+    if (response.success && response.data) {
+      // 更新 store 中的用户信息
+      userStore.user = response.data;
+      localStorage.setItem('user', JSON.stringify(response.data));
+      ElMessage.success('用户名修改成功');
+      emit('profile-updated');
+    }
+  }
+  catch (error: any) {
+    const errorMessage = error.error || '修改用户名失败';
+    ElMessage.error(errorMessage);
+  }
 };
 // 保存密码
 const handleSavePassword = async () => {
@@ -101,26 +101,26 @@ const handleSavePassword = async () => {
  return;
  }
  try {
- const response = await updatePassword({
- oldPassword: passwordForm.value.oldPassword,
- newPassword: passwordForm.value.newPassword
- });
- if (response.data.success) {
- ElMessage.success('密码修改成功，请重新登录');
- // 清空表单
- passwordForm.value = {
- oldPassword: '',
- newPassword: '',
- confirmPassword: ''
- };
- emit('password-updated');
- // 关闭弹窗
- handleClose();
- // 提示用户重新登录（可选：自动退出）
- // userStore.logout();
- // router.push('/auth');
- }
- }
+    const response = await updatePassword({
+      oldPassword: passwordForm.value.oldPassword,
+      newPassword: passwordForm.value.newPassword
+    });
+    if (response.success) {
+      ElMessage.success('密码修改成功，请重新登录');
+      // 清空表单
+      passwordForm.value = {
+        oldPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      };
+      emit('password-updated');
+      // 关闭弹窗
+      handleClose();
+      // 提示用户重新登录（可选：自动退出）
+      // userStore.logout();
+      // router.push('/auth');
+    }
+  }
  catch (error: any) {
  const errorMessage = error.error || '修改密码失败';
  ElMessage.error(errorMessage);

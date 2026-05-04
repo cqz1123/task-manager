@@ -30,12 +30,15 @@ export const useUserStore = defineStore('user', () => {
     error.value = null;
     try {
       const response = await login({ email, password });
-      token.value = response.token;
-      user.value = response.user;
-      // 存储到本地存储
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      return response;
+      if (response.success && response.data) {
+        token.value = response.data.token;
+        user.value = response.data.user;
+        // 存储到本地存储
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        return response.data;
+      }
+      throw new Error(response.error || '登录失败');
     } catch (err: any) {
       error.value = err.error || '登录失败';
       throw err;
@@ -52,12 +55,15 @@ export const useUserStore = defineStore('user', () => {
     error.value = null;
     try {
       const response = await register({ username, email, password });
-      token.value = response.token;
-      user.value = response.user;
-      // 存储到本地存储
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      return response;
+      if (response.success && response.data) {
+        token.value = response.data.token;
+        user.value = response.data.user;
+        // 存储到本地存储
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        return response.data;
+      }
+      throw new Error(response.error || '注册失败');
     } catch (err: any) {
       error.value = err.error || '注册失败';
       throw err;
@@ -102,8 +108,10 @@ export const useUserStore = defineStore('user', () => {
     loading.value = true;
     try {
       const response = await getCurrentUser();
-      user.value = response.user;
-      localStorage.setItem('user', JSON.stringify(response.user));
+      if (response.success && response.data) {
+        user.value = response.data.user;
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
     } catch (err) {
       // 如果获取失败，可能是令牌过期，执行登出
       logout();
@@ -121,13 +129,14 @@ export const useUserStore = defineStore('user', () => {
     error.value = null;
     try {
       const response = await updateProfile(data);
-      if (response.data && response.data.success) {
-        user.value = response.data.user;
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        return response;
+      if (response.success && response.data) {
+        user.value = response.data;
+        localStorage.setItem('user', JSON.stringify(response.data));
+        return response.data;
       }
+      throw new Error(response.error || '更新失败');
     } catch (err: any) {
-      error.value = err.response?.data?.error || '更新失败';
+      error.value = err.error || '更新失败';
       throw err;
     } finally {
       loading.value = false;

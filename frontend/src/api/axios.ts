@@ -28,10 +28,93 @@ api.interceptors.request.use(
   }
 );
 
-// 响应拦截器：处理错误
+// 将后端响应转换为统一的 ApiResponse 格式
+function transformResponse(data: any): any {
+  // 如果数据为空，返回成功但无数据
+  if (data === undefined || data === null) {
+    return {
+      success: true,
+      data: null,
+      error: undefined
+    };
+  }
+  
+  // 如果已经是统一格式（有 success 字段且有 data 字段），直接返回
+  if (typeof data.success === 'boolean' && data.data !== undefined) {
+    return data;
+  }
+  
+  // 如果有 success 字段但没有 data 字段（部分后端接口的格式）
+  if (typeof data.success === 'boolean') {
+    if (data.success) {
+      // 将其他字段作为 data 内容
+      const { success, error, message, ...rest } = data;
+      return {
+        success: true,
+        data: { ...rest, message },
+        error: undefined
+      };
+    } else {
+      return {
+        success: false,
+        data: null,
+        error: data.error || data.message || '操作失败'
+      };
+    }
+  }
+  
+  // 如果有 error 字段，说明是错误响应
+  if (data.error) {
+    return {
+      success: false,
+      error: data.error,
+      data: null
+    };
+  }
+  
+  // 登录/注册成功响应: { message, token, user }
+  if (data.token && data.user) {
+    return {
+      success: true,
+      data: {
+        message: data.message,
+        token: data.token,
+        user: data.user
+      },
+      error: undefined
+    };
+  }
+  
+  // 获取用户信息响应: { user }
+  if (data.user) {
+    return {
+      success: true,
+      data: { user: data.user },
+      error: undefined
+    };
+  }
+  
+  // 更新用户信息响应（返回用户对象）
+  if (data.username || data.email) {
+    return {
+      success: true,
+      data: data,
+      error: undefined
+    };
+  }
+  
+  // 其他成功响应，直接包装
+  return {
+    success: true,
+    data: data,
+    error: undefined
+  };
+}
+
+// 响应拦截器：处理错误和格式转换
 api.interceptors.response.use(
   (response) => {
-    return response.data;
+    return transformResponse(response.data);
   },
   (error) => {
     if (error.response?.status === 401) {
@@ -40,7 +123,9 @@ api.interceptors.response.use(
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
-    return Promise.reject(error.response?.data || error.message);
+    // 将错误响应也转换为统一格式
+    const errorData = error.response?.data || { error: error.message };
+    return Promise.reject(transformResponse(errorData));
   }
 );
 

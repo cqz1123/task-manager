@@ -35,9 +35,11 @@ export const useBoardStore = defineStore('board', () => {
     
     try {
       const response = await boardApi.getBoards();
-      boards.value = response.data;
+      if (response.success && response.data) {
+        boards.value = response.data;
+      }
     } catch (err: any) {
-      error.value = err.response?.data?.error || '获取看板列表失败';
+      error.value = err.error || '获取看板列表失败';
       console.error('获取看板列表失败:', err);
     } finally {
       loading.value = false;
@@ -53,12 +55,15 @@ export const useBoardStore = defineStore('board', () => {
     
     try {
       const response = await boardApi.createBoard(boardData);
-      // 创建者默认是所有者
-      const newBoard = { ...response.data, myRole: 'owner' as const };
-      boards.value.unshift(newBoard); // 将新看板添加到列表开头
-      return newBoard;
+      if (response.success && response.data) {
+        // 创建者默认是所有者
+        const newBoard = { ...response.data, myRole: 'owner' as const };
+        boards.value.unshift(newBoard); // 将新看板添加到列表开头
+        return newBoard;
+      }
+      throw new Error('创建看板失败');
     } catch (err: any) {
-      error.value = err.response?.data?.error || '创建看板失败';
+      error.value = err.error || '创建看板失败';
       console.error('创建看板失败:', err);
       throw err;
     } finally {
@@ -74,10 +79,14 @@ export const useBoardStore = defineStore('board', () => {
     error.value = null;
 
     try {
-      await boardApi.deleteBoard(boardId);
-      boards.value = boards.value.filter(board => board.id !== boardId);
+      const response = await boardApi.deleteBoard(boardId);
+      if (response.success) {
+        boards.value = boards.value.filter(board => board.id !== boardId);
+      } else {
+        throw new Error(response.error || '删除看板失败');
+      }
     } catch (err: any) {
-      error.value = err.response?.data?.error || '删除看板失败';
+      error.value = err.error || '删除看板失败';
       console.error('删除看板失败:', err);
       throw err;
     } finally {
@@ -94,18 +103,21 @@ export const useBoardStore = defineStore('board', () => {
 
     try {
       const response = await boardApi.updateBoard(boardId, boardData);
-      // 更新看板列表中的看板
-      const boardIndex = boards.value.findIndex(board => board.id === boardId);
-      if (boardIndex !== -1) {
-        boards.value[boardIndex] = response.data;
+      if (response.success && response.data) {
+        // 更新看板列表中的看板
+        const boardIndex = boards.value.findIndex(board => board.id === boardId);
+        if (boardIndex !== -1) {
+          boards.value[boardIndex] = response.data;
+        }
+        // 更新当前看板
+        if (currentBoard.value?.id === boardId) {
+          currentBoard.value = response.data;
+        }
+        return response.data;
       }
-      // 更新当前看板
-      if (currentBoard.value?.id === boardId) {
-        currentBoard.value = response.data;
-      }
-      return response.data;
+      throw new Error(response.error || '修改看板失败');
     } catch (err: any) {
-      error.value = err.response?.data?.error || '修改看板失败';
+      error.value = err.error || '修改看板失败';
       console.error('修改看板失败:', err);
       throw err;
     } finally {
@@ -122,17 +134,19 @@ export const useBoardStore = defineStore('board', () => {
     
     try {
       const response = await listApi.getListsWithCards(boardId);
-      // 使用返回的看板信息
-      currentBoard.value = response.board;
-      // 设置当前用户的角色
-      if (response.board && response.board.myRole) {
-        currentBoardRole.value = response.board.myRole as 'owner' | 'editor' | 'viewer';
-      } else {
-        currentBoardRole.value = null;
+      if (response.success && response.data) {
+        // 使用返回的看板信息
+        currentBoard.value = response.data.board;
+        // 设置当前用户的角色
+        if (response.data.board && response.data.board.myRole) {
+          currentBoardRole.value = response.data.board.myRole as 'owner' | 'editor' | 'viewer';
+        } else {
+          currentBoardRole.value = null;
+        }
+        lists.value = response.data.lists;
       }
-      lists.value = response.lists;
     } catch (err: any) {
-      error.value = err.response?.data?.error || '获取看板详情失败';
+      error.value = err.error || '获取看板详情失败';
       console.error('获取看板详情失败:', err);
       throw err;
     } finally {
@@ -149,16 +163,18 @@ export const useBoardStore = defineStore('board', () => {
     
     try {
       const response = await memberApi.getBoardMembers(boardId);
-      // 合并 owner 和 members
-      const allMembers: BoardMember[] = [];
-      if (response.owner) {
-        allMembers.push(response.owner);
+      if (response.success && response.data) {
+        // 合并 owner 和 members
+        const allMembers: BoardMember[] = [];
+        if (response.data.owner) {
+          allMembers.push(response.data.owner);
+        }
+        allMembers.push(...response.data.members);
+        members.value = allMembers;
+        return allMembers;
       }
-      allMembers.push(...response.members);
-      members.value = allMembers;
-      return allMembers;
     } catch (err: any) {
-      error.value = err.response?.data?.error || '获取成员列表失败';
+      error.value = err.error || '获取成员列表失败';
       console.error('获取成员列表失败:', err);
       throw err;
     } finally {
@@ -174,14 +190,18 @@ export const useBoardStore = defineStore('board', () => {
     error.value = null;
     
     try {
-      await memberApi.updateMemberRole(boardId, userId, role);
-      // 更新本地成员列表
-      const memberIndex = members.value.findIndex(member => member.userId === userId);
-      if (memberIndex !== -1) {
-        members.value[memberIndex]!.role = role;
+      const response = await memberApi.updateMemberRole(boardId, userId, role);
+      if (response.success) {
+        // 更新本地成员列表
+        const memberIndex = members.value.findIndex(member => member.userId === userId);
+        if (memberIndex !== -1) {
+          members.value[memberIndex]!.role = role;
+        }
+      } else {
+        throw new Error(response.error || '修改成员角色失败');
       }
     } catch (err: any) {
-      error.value = err.response?.data?.error || '修改成员角色失败';
+      error.value = err.error || '修改成员角色失败';
       console.error('修改成员角色失败:', err);
       throw err;
     } finally {
@@ -197,11 +217,15 @@ export const useBoardStore = defineStore('board', () => {
     error.value = null;
     
     try {
-      await memberApi.removeMember(boardId, userId);
-      // 从本地成员列表移除
-      members.value = members.value.filter(member => member.userId !== userId);
+      const response = await memberApi.removeMember(boardId, userId);
+      if (response.success) {
+        // 从本地成员列表移除
+        members.value = members.value.filter(member => member.userId !== userId);
+      } else {
+        throw new Error(response.error || '移除成员失败');
+      }
     } catch (err: any) {
-      error.value = err.response?.data?.error || '移除成员失败';
+      error.value = err.error || '移除成员失败';
       console.error('移除成员失败:', err);
       throw err;
     } finally {
@@ -218,12 +242,46 @@ export const useBoardStore = defineStore('board', () => {
     
     try {
       const response = await boardApi.joinBoardByCode(inviteCode);
-      // 更新看板列表
-      await fetchBoards();
-      return response.data;
+      if (response.success && response.data) {
+        // 更新看板列表
+        await fetchBoards();
+        return response.data;
+      }
+      throw new Error(response.error || '加入看板失败');
     } catch (err: any) {
-      error.value = err.response?.data?.error || '加入看板失败';
+      error.value = err.error || '加入看板失败';
       console.error('加入看板失败:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  /**
+   * 重新生成邀请码
+   */
+  const regenerateInviteCode = async (boardId: number) => {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      const response = await boardApi.regenerateInviteCode(boardId);
+      if (response.success && response.data) {
+        // 更新当前看板的邀请码
+        if (currentBoard.value?.id === boardId) {
+          currentBoard.value.invite_code = response.data.inviteCode;
+        }
+        // 更新看板列表中的邀请码
+        const boardIndex = boards.value.findIndex(board => board.id === boardId);
+        if (boardIndex !== -1) {
+          boards.value[boardIndex]!.invite_code = response.data.inviteCode;
+        }
+        return response.data;
+      }
+      throw new Error(response.error || '重新生成邀请码失败');
+    } catch (err: any) {
+      error.value = err.error || '重新生成邀请码失败';
+      console.error('重新生成邀请码失败:', err);
       throw err;
     } finally {
       loading.value = false;
@@ -238,11 +296,14 @@ export const useBoardStore = defineStore('board', () => {
     error.value = null;
     
     try {
-      const newList = await listApi.createList(boardId, title);
-      // 不直接添加到本地列表，等待广播事件更新（避免重复）
-      return newList;
+      const response = await listApi.createList(boardId, title);
+      if (response.success && response.data) {
+        // 不直接添加到本地列表，等待广播事件更新（避免重复）
+        return response.data;
+      }
+      throw new Error(response.error || '创建列表失败');
     } catch (err: any) {
-      error.value = err.response?.data?.error || '创建列表失败';
+      error.value = err.error || '创建列表失败';
       console.error('创建列表失败:', err);
       throw err;
     } finally {
@@ -258,11 +319,15 @@ export const useBoardStore = defineStore('board', () => {
     error.value = null;
 
     try {
-      await listApi.deleteList(boardId, listId);
-      // 从列表中移除
-      lists.value = lists.value.filter(list => list.id !== listId);
+      const response = await listApi.deleteList(boardId, listId);
+      if (response.success) {
+        // 从列表中移除
+        lists.value = lists.value.filter(list => list.id !== listId);
+      } else {
+        throw new Error(response.error || '删除列表失败');
+      }
     } catch (err: any) {
-      error.value = err.response?.data?.error || '删除列表失败';
+      error.value = err.error || '删除列表失败';
       console.error('删除列表失败:', err);
       throw err;
     } finally {
@@ -278,15 +343,18 @@ export const useBoardStore = defineStore('board', () => {
     error.value = null;
 
     try {
-      const updatedList = await listApi.updateList(boardId, listId, title);
-      // 更新列表
-      const listIndex = lists.value.findIndex(list => list.id === listId);
-      if (listIndex !== -1) {
-        lists.value[listIndex]!.title = updatedList.title;
+      const response = await listApi.updateList(boardId, listId, title);
+      if (response.success && response.data) {
+        // 更新列表
+        const listIndex = lists.value.findIndex(list => list.id === listId);
+        if (listIndex !== -1) {
+          lists.value[listIndex]!.title = response.data.title;
+        }
+        return response.data;
       }
-      return updatedList;
+      throw new Error(response.error || '修改列表失败');
     } catch (err: any) {
-      error.value = err.response?.data?.error || '修改列表失败';
+      error.value = err.error || '修改列表失败';
       console.error('修改列表失败:', err);
       throw err;
     } finally {
@@ -303,11 +371,14 @@ export const useBoardStore = defineStore('board', () => {
     
     try {
       const boardId = currentBoard.value?.id || 0;
-      const newCard = await cardApi.createCard(boardId, cardData);
-      // 不直接添加到本地列表，等待广播事件更新（避免重复）
-      return newCard;
+      const response = await cardApi.createCard(boardId, cardData);
+      if (response.success && response.data) {
+        // 不直接添加到本地列表，等待广播事件更新（避免重复）
+        return response.data;
+      }
+      throw new Error(response.error || '创建卡片失败');
     } catch (err: any) {
-      error.value = err.response?.data?.error || '创建卡片失败';
+      error.value = err.error || '创建卡片失败';
       console.error('创建卡片失败:', err);
       throw err;
     } finally {
@@ -324,13 +395,17 @@ export const useBoardStore = defineStore('board', () => {
 
     try {
       const boardId = currentBoard.value?.id || 0;
-      await cardApi.deleteCard(boardId, cardId);
-      // 找到对应的列表并移除卡片
-      lists.value.forEach(list => {
-        list.cards = list.cards.filter((card: Card) => card.id !== cardId);
-      });
+      const response = await cardApi.deleteCard(boardId, cardId);
+      if (response.success) {
+        // 找到对应的列表并移除卡片
+        lists.value.forEach(list => {
+          list.cards = list.cards.filter((card: Card) => card.id !== cardId);
+        });
+      } else {
+        throw new Error(response.error || '删除卡片失败');
+      }
     } catch (err: any) {
-      error.value = err.response?.data?.error || '删除卡片失败';
+      error.value = err.error || '删除卡片失败';
       console.error('删除卡片失败:', err);
       throw err;
     } finally {
@@ -506,17 +581,20 @@ export const useBoardStore = defineStore('board', () => {
 
     try {
       const boardId = currentBoard.value?.id || 0;
-      const updatedCard = await cardApi.updateCard(boardId, cardId, cardData);
-      // 找到对应的列表并更新卡片
-      lists.value.forEach(list => {
-        const cardIndex = list.cards.findIndex((card: Card) => card.id === cardId);
-        if (cardIndex !== -1) {
-          list.cards[cardIndex] = updatedCard;
-        }
-      });
-      return updatedCard;
+      const response = await cardApi.updateCard(boardId, cardId, cardData);
+      if (response.success && response.data) {
+        // 找到对应的列表并更新卡片
+        lists.value.forEach(list => {
+          const cardIndex = list.cards.findIndex((card: Card) => card.id === cardId);
+          if (cardIndex !== -1) {
+            list.cards[cardIndex] = response.data;
+          }
+        });
+        return response.data;
+      }
+      throw new Error(response.error || '修改卡片失败');
     } catch (err: any) {
-      error.value = err.response?.data?.error || '修改卡片失败';
+      error.value = err.error || '修改卡片失败';
       console.error('修改卡片失败:', err);
       throw err;
     } finally {
@@ -541,50 +619,32 @@ export const useBoardStore = defineStore('board', () => {
     const originalLists = JSON.parse(JSON.stringify(lists.value));
 
     try {
-      console.log('开始移动卡片:', { cardId, sourceListId, targetListId, newIndex });
-      
       // 检查lists.value是否存在
       if (!lists.value || lists.value.length === 0) {
-        console.error('列表数据不存在');
         throw new Error('列表数据不存在');
       }
-      
-      // 打印当前所有列表及其卡片
-      console.log('当前所有列表:', lists.value.map(list => ({
-        id: list.id,
-        title: list.title,
-        cardCount: list.cards ? list.cards.length : 0,
-        cardIds: list.cards ? list.cards.map(card => card.id) : []
-      })));
-      
+
       // 找到目标列表
       const targetListIndex = lists.value.findIndex(list => list.id === targetListId);
-      console.log('目标列表索引:', targetListIndex);
       
       if (targetListIndex === -1) {
-        console.error('目标列表不存在:', targetListId);
         throw new Error('目标列表不存在');
       }
 
       const targetList = lists.value[targetListIndex];
       if (!targetList) {
-        console.error('目标列表不存在:', targetListId);
         throw new Error('目标列表不存在');
       }
-      console.log('目标列表:', { id: targetList.id, title: targetList.title, cardCount: targetList.cards ? targetList.cards.length : 0 });
-      
+
       // 确保目标列表和卡片数组存在
       if (!targetList.cards) {
-        console.error('目标列表卡片数组不存在:', targetList);
         throw new Error('目标列表卡片数据不存在');
       }
 
       // 找到被移动的卡片 - 在所有列表中查找
       let movedCard: Card | undefined;
       let cardFound = false;
-      let foundListIndex = -1;
       
-      console.log('在所有列表中查找卡片:', cardId);
       for (let i = 0; i < lists.value.length; i++) {
         const list = lists.value[i];
         if (list && list.cards) {
@@ -592,30 +652,22 @@ export const useBoardStore = defineStore('board', () => {
           if (index !== -1) {
             [movedCard] = list.cards.splice(index, 1);
             cardFound = true;
-            foundListIndex = i;
-            if (movedCard) {
-              console.log('找到并移除卡片:', { cardId: movedCard.id, listId: list.id, listIndex: i });
-            }
             break;
           }
         }
       }
       
       if (!cardFound || !movedCard) {
-        console.error('卡片不存在:', { cardId, sourceListId, targetListId });
         // 检查是否卡片已经在目标列表中
         const cardInTarget = targetList.cards.find((card: Card) => card.id === cardId);
         if (cardInTarget) {
-          console.log('卡片已经在目标列表中:', { cardId, targetListId });
           // 如果卡片已经在目标列表中，检查位置是否需要调整
           const currentIndex = targetList.cards.findIndex((card: Card) => card.id === cardId);
           if (currentIndex !== newIndex) {
             // 调整位置
             targetList.cards.splice(currentIndex, 1);
             targetList.cards.splice(newIndex, 0, cardInTarget);
-            console.log('调整卡片在目标列表中的位置:', { cardId, oldIndex: currentIndex, newIndex });
           } else {
-            console.log('卡片已经在目标列表的正确位置:', { cardId, targetListId, index: currentIndex });
             return; // 不需要进一步处理
           }
         } else {
@@ -626,31 +678,22 @@ export const useBoardStore = defineStore('board', () => {
         targetList.cards.splice(newIndex, 0, movedCard);
         // 更新卡片的 list_id 为新列表的 ID
         movedCard.list_id = targetListId;
-        console.log('卡片移动成功:', { cardId, sourceListId: lists.value[foundListIndex]?.id, targetListId, newIndex });
       }
 
       // 调用后端 API
-      console.log('调用后端 API 更新卡片位置');
-      try {
-        const boardId = currentBoard.value?.id || 0;
-        await cardApi.updateCardPosition(boardId, cardId, {
-          sourceListId,
-          targetListId,
-          newOrder: newIndex
-        });
-        console.log('后端 API 调用成功');
-      } catch (apiError) {
-        console.error('后端 API 调用失败:', apiError);
-        throw apiError;
+      const boardId = currentBoard.value?.id || 0;
+      const response = await cardApi.updateCardPosition(boardId, cardId, {
+        sourceListId,
+        targetListId,
+        newOrder: newIndex
+      });
+      if (!response.success) {
+        throw new Error(response.error || '移动卡片失败');
       }
-      
-      console.log('卡片移动成功');
     } catch (err: any) {
       // 失败时回滚到原始状态
-      console.error('移动卡片失败，回滚到原始状态:', err);
       lists.value = originalLists;
-      error.value = err.response?.data?.error || '移动卡片失败';
-      console.error('移动卡片失败:', err);
+      error.value = err.error || '移动卡片失败';
       throw err;
     }
   };
@@ -698,6 +741,7 @@ export const useBoardStore = defineStore('board', () => {
     updateMemberRole,
     removeMember,
     joinBoardByCode,
+    regenerateInviteCode,
     resetState
   };
 });

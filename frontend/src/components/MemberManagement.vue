@@ -13,6 +13,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void;
+  (e: 'invite-code-updated', newCode: string): void;
 }>();
 
 const boardStore = useBoardStore();
@@ -113,6 +114,18 @@ const refreshMembers = async () => {
   }
 };
 
+// 重新生成邀请码
+const regenerateInviteCode = async () => {
+  try {
+    const response = await boardStore.regenerateInviteCode(props.boardId);
+    emit('invite-code-updated', response.inviteCode);
+    showInviteCode.value = true;
+    ElMessage.success('邀请码已重新生成');
+  } catch (error: any) {
+    ElMessage.error(error.error || '重新生成邀请码失败');
+  }
+};
+
 // 关闭弹窗
 const handleClose = () => {
   emit('update:modelValue', false);
@@ -141,8 +154,8 @@ watch(() => props.modelValue, (val) => {
           type="text"
           icon="RefreshCw"
           size="small"
-          @click="refreshMembers"
-          title="刷新成员列表"
+          @click="regenerateInviteCode"
+          title="重新生成邀请码"
         />
       </div>
       <div class="invite-code-content">

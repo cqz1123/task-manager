@@ -1,19 +1,21 @@
 import axios from './axios';
+import type { ApiResponse } from './types';
 import type { MemberListResponse } from '../types/Board';
 
 // 获取看板成员列表
-export async function getBoardMembers(boardId: number): Promise<MemberListResponse> {
-  const response: { success: boolean; data: MemberListResponse } = await axios.get(`/boards/${boardId}/members`);
-  return response.data;
+export async function getBoardMembers(boardId: number): Promise<ApiResponse<MemberListResponse>> {
+  const response = await axios.get(`/boards/${boardId}/members`) as ApiResponse<MemberListResponse>;
+  return response;
 }
 
 // 修改成员角色
-export async function updateMemberRole(boardId: number, userId: number, role: 'editor' | 'viewer'): Promise<{ data: any }> {
-  const response: { success: boolean; data: any } = await axios.patch(`/boards/${boardId}/members/${userId}`, { role });
+export async function updateMemberRole(boardId: number, userId: number, role: 'editor' | 'viewer'): Promise<ApiResponse> {
+  const response = await axios.patch(`/boards/${boardId}/members/${userId}`, { role }) as ApiResponse;
   return response;
 }
 
 // 移除成员
-export async function removeMember(boardId: number, userId: number): Promise<void> {
-  await axios.delete(`/boards/${boardId}/members/${userId}`);
+export async function removeMember(boardId: number, userId: number): Promise<ApiResponse> {
+  const response = await axios.delete(`/boards/${boardId}/members/${userId}`) as ApiResponse;
+  return response;
 }

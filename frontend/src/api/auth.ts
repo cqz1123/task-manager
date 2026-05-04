@@ -4,6 +4,7 @@
  */
 
 import api from './axios';
+import type { ApiResponse } from './types';
 
 // 用户接口定义
 export interface User {
@@ -27,8 +28,8 @@ export interface RegisterRequest {
   password: string;
 }
 
-// 认证响应接口
-export interface AuthResponse {
+// 认证响应数据接口
+export interface AuthData {
   message: string;
   token: string;
   user: User;
@@ -37,21 +38,24 @@ export interface AuthResponse {
 /**
  * 登录函数
  */
-export const login = async (data: LoginRequest): Promise<AuthResponse> => {
-  return api.post('/auth/login', data);
+export const login = async (data: LoginRequest): Promise<ApiResponse<AuthData>> => {
+  const response = await api.post('/auth/login', data) as ApiResponse<AuthData>;
+  return response;
 };
 
 /**
  * 注册函数
  */
-export const register = async (data: RegisterRequest): Promise<AuthResponse> => {
-  return api.post('/auth/register', data);
+export const register = async (data: RegisterRequest): Promise<ApiResponse<AuthData>> => {
+  const response = await api.post('/auth/register', data) as ApiResponse<AuthData>;
+  return response;
 };
 
 /**
  * 获取当前用户信息
  * @returns 用户信息
  */
-export const getCurrentUser = async (): Promise<{ user: User }> => {
-  return api.get('/auth/me');
+export const getCurrentUser = async (): Promise<ApiResponse<{ user: User }>> => {
+  const response = await api.get('/auth/me') as ApiResponse<{ user: User }>;
+  return response;
 };
