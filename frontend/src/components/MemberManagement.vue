@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import { useBoardStore } from '../stores/board';
+import { useMemberStore } from '../stores/member';
 import { Delete, CopyDocument, Refresh } from '@element-plus/icons-vue';
 import { ElDialog, ElTable, ElTableColumn, ElButton, ElPopconfirm, ElMessage, ElTag, ElInput } from 'element-plus';
 
@@ -17,6 +18,7 @@ const emit = defineEmits<{
 }>();
 
 const boardStore = useBoardStore();
+const memberStore = useMemberStore();
 
 // 复制状态
 const copied = ref(false);
@@ -25,7 +27,7 @@ const copied = ref(false);
 const showInviteCode = ref(false);
 
 // 获取成员列表
-const members = computed(() => boardStore.members);
+const members = computed(() => memberStore.members);
 
 // 获取角色标签类型
 const getRoleTagType = (role: string) => {
@@ -63,7 +65,7 @@ const handleUpdateRole = async (member: any, newRole: 'editor' | 'viewer') => {
   }
 
   try {
-    await boardStore.updateMemberRole(props.boardId, member.userId, newRole);
+    await memberStore.updateMemberRole(props.boardId, member.userId, newRole);
     ElMessage.success('角色修改成功');
   } catch (error: any) {
     ElMessage.error(error.response?.data?.error || '修改角色失败');
@@ -78,7 +80,7 @@ const handleRemoveMember = async (member: any) => {
   }
 
   try {
-    await boardStore.removeMember(props.boardId, member.userId);
+    await memberStore.removeMember(props.boardId, member.userId);
     ElMessage.success('成员移除成功');
   } catch (error: any) {
     ElMessage.error(error.response?.data?.error || '移除成员失败');
@@ -107,7 +109,7 @@ const copyInviteCode = async () => {
 // 刷新成员列表
 const refreshMembers = async () => {
   try {
-    await boardStore.fetchMembers(props.boardId);
+    await memberStore.fetchMembers(props.boardId);
     ElMessage.success('成员列表已刷新');
   } catch (error) {
     ElMessage.error('刷新成员列表失败');

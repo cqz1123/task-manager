@@ -4,6 +4,8 @@ import type { ListWithCards } from '../types/List';
 import type { Card, CardCreateData } from '../types/Card';
 import { Delete } from '@element-plus/icons-vue';
 import { useBoardStore } from '../stores/board';
+import { useListStore } from '../stores/list';
+import { useCardStore } from '../stores/card';
 import CardItem from './CardItem.vue';
 import { ElButton, ElDialog, ElInput, ElPopconfirm, ElMessage, ElDatePicker } from 'element-plus';
 import { ElInput as ElTextarea } from 'element-plus';
@@ -24,6 +26,8 @@ const emit = defineEmits<{
 }>();
 
 const boardStore = useBoardStore();
+const listStore = useListStore();
+const cardStore = useCardStore();
 
 // 列表标题编辑状态
 const isEditingTitle = ref(false);
@@ -69,7 +73,7 @@ const saveTitle = async () => {
 
   try {
     const boardId = boardStore.currentBoard?.id || 0;
-    await boardStore.updateList(boardId, props.list.id, editingTitle.value.trim());
+    await listStore.updateList(boardId, props.list.id, editingTitle.value.trim());
     ElMessage.success('列表标题修改成功');
     isEditingTitle.value = false;
   } catch (error) {
@@ -113,7 +117,7 @@ const handleAddCard = async () => {
       assignee: newCardAssignee.value.trim() || undefined
     };
 
-    await boardStore.createCard(cardData);
+    await cardStore.createCard(cardData);
     ElMessage.success('卡片创建成功');
 
     // Reset form
@@ -135,7 +139,7 @@ const handleDeleteList = async () => {
 
   try {
     const boardId = boardStore.currentBoard?.id || 0;
-    await boardStore.deleteList(boardId, props.list.id);
+    await listStore.deleteList(boardId, props.list.id);
     ElMessage.success('列表删除成功');
   } catch (error) {
     ElMessage.error('删除列表失败');

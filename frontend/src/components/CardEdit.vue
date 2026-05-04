@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import type { Card } from '../types/Card';
-import { useBoardStore } from '../stores/board';
+import { useCardStore } from '../stores/card';
 import { ElDialog, ElForm, ElFormItem, ElInput, ElDatePicker, ElButton, ElMessage } from 'element-plus';
 
 const props = defineProps<{
@@ -15,7 +15,7 @@ const emit = defineEmits<{
   (e: 'card-updated'): void;
 }>();
 
-const boardStore = useBoardStore();
+const cardStore = useCardStore();
 
 const formData = ref({
   title: '',
@@ -55,7 +55,7 @@ const handleSubmit = async () => {
   }
 
   try {
-    await boardStore.updateCard(props.card.id, {
+    await cardStore.updateCard(props.card.id, {
       title: formData.value.title.trim(),
       description: formData.value.description.trim() || null,
       dueDate: formData.value.dueDate || null,

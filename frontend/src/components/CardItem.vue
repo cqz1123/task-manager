@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { Card } from '../types/Card';
-import { useBoardStore } from '../stores/board';
+import { useCardStore } from '../stores/card';
 import * as cardApi from '../api/card';
 import { Delete, Check, RefreshLeft } from '@element-plus/icons-vue';
 import { ElPopconfirm, ElButton, ElMessage } from 'element-plus';
@@ -19,12 +19,12 @@ const emit = defineEmits<{
   (e: 'card-uncompleted', cardId: number): void;
 }>();
 
-const boardStore = useBoardStore();
+const cardStore = useCardStore();
 const loading = ref(false);
 
 const handleDelete = async () => {
   try {
-    await boardStore.deleteCard(props.card.id);
+    await cardStore.deleteCard(props.card.id);
     ElMessage.success('卡片删除成功');
   } catch (error) {
     ElMessage.error('删除卡片失败');

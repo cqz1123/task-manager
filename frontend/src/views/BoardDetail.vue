@@ -2,6 +2,9 @@
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useBoardStore } from '../stores/board';
+import { useListStore } from '../stores/list';
+import { useCardStore } from '../stores/card';
+import { useMemberStore } from '../stores/member';
 import type { Card } from '../types/Card';
 import type { ListWithCards, List } from '../types/List';
 import NavBar from '../components/NavBar.vue';
@@ -17,6 +20,9 @@ import { socket, joinBoard, leaveBoard } from '../socket/socket';
 const route = useRoute();
 const router = useRouter();
 const boardStore = useBoardStore();
+const listStore = useListStore();
+const cardStore = useCardStore();
+const memberStore = useMemberStore();
 
 const boardId = ref<number>(0);
 const loading = ref(false);
@@ -62,7 +68,7 @@ const canDrag = computed(() => !isViewer.value);
 
 // 排序后的列表：普通列表按 order_index 升序，系统列表（is_system=1）放到最后
 const sortedLists = computed(() => {
-  const lists = [...boardStore.lists];
+  const lists = [...listStore.lists];
   return lists.sort((a, b) => {
     // 首先按 is_system 排序，系统列表排后
     if ((a as any).is_system !== (b as any).is_system) {
@@ -94,6 +100,9 @@ onBeforeUnmount(() => {
   }
   
   boardStore.resetState();
+  listStore.resetState();
+  cardStore.resetState();
+  memberStore.resetState();
 });
 
 /**
@@ -110,37 +119,37 @@ const setupSocket = () => {
   
   // 监听卡片创建事件
   socket.on('card-created', (card: Card) => {
-    boardStore.addCardByBroadcast(card.list_id, card);
+    cardStore.addCardByBroadcast(card.list_id, card);
   });
   
   // 监听卡片更新事件
   socket.on('card-updated', (card: Card) => {
-    boardStore.updateCardByBroadcast(card);
+    cardStore.updateCardByBroadcast(card);
   });
   
   // 监听卡片删除事件
   socket.on('card-deleted', ({ cardId }: { cardId: number }) => {
-    boardStore.deleteCardByBroadcast(cardId);
+    cardStore.deleteCardByBroadcast(cardId);
   });
   
   // 监听卡片移动事件
   socket.on('card-moved', (card: Card) => {
-    boardStore.moveCardByBroadcast(card);
+    cardStore.moveCardByBroadcast(card);
   });
   
   // 监听列表创建事件
   socket.on('list-created', (list: ListWithCards) => {
-    boardStore.addListByBroadcast(list);
+    listStore.addListByBroadcast(list);
   });
   
   // 监听列表更新事件
   socket.on('list-updated', (list: List) => {
-    boardStore.updateListByBroadcast(list);
+    listStore.updateListByBroadcast(list);
   });
   
   // 监听列表删除事件
   socket.on('list-deleted', ({ listId }: { listId: number }) => {
-    boardStore.deleteListByBroadcast(listId);
+    listStore.deleteListByBroadcast(listId);
   });
   
   // 监听连接错误
@@ -166,7 +175,7 @@ const cleanupSocket = () => {
 const fetchBoardData = async () => {
   loading.value = true;
   try {
-    await boardStore.fetchBoardDetail(boardId.value);
+    await listStore.fetchBoardDetail(boardId.value);
   } catch (error) {
     ElMessage.error('获取看板详情失败');
     router.push('/boards');
@@ -242,7 +251,7 @@ const handleAddList = async () => {
   }
 
   try {
-    await boardStore.createList(boardId.value, newListTitle.value.trim());
+    await listStore.createList(boardId.value, newListTitle.value.trim());
     ElMessage.success('列表创建成功');
     newListTitle.value = '';
     showAddListDialog.value = false;
@@ -307,7 +316,7 @@ const handleDragEnd = async (evt: any) => {
 
   try {
     // 调用 store 中的 moveCard 方法
-    await boardStore.moveCard({
+    await cardStore.moveCard({
       cardId,
       sourceListId,
       targetListId,
@@ -323,7 +332,7 @@ const handleDragEnd = async (evt: any) => {
 const openMemberManagement = async () => {
   if (!isOwner.value) return;
   try {
-    await boardStore.fetchMembers(boardId.value);
+    await memberStore.fetchMembers(boardId.value);
     showMemberManagement.value = true;
   } catch (error) {
     ElMessage.error('获取成员列表失败');
