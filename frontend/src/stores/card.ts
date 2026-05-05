@@ -43,16 +43,7 @@ export const useCardStore = defineStore('card', () => {
       const boardId = boardStore.currentBoard?.id || 0;
       const response = await cardApi.createCard(boardId, cardData);
       if (response.success && response.data) {
-        // 创建成功后立即添加到本地列表
-        const listStore = useListStore();
-        const lists = listStore.lists;
-        const list = lists.find(list => list.id === cardData.listId);
-        if (list) {
-          if (!list.cards) {
-            list.cards = [];
-          }
-          list.cards.push(response.data);
-        }
+        // 不直接添加到本地，等待广播事件（避免重复）
         return response.data;
       }
       throw new Error(response.error || '创建卡片失败');
