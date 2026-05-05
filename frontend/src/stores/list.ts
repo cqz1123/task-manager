@@ -56,7 +56,9 @@ export const useListStore = defineStore('list', () => {
     try {
       const response = await listApi.createList(boardId, title);
       if (response.success && response.data) {
-        // 不直接添加到本地，等待广播事件（避免重复）
+        // 创建成功后立即添加到本地列表
+        const newList = { ...response.data, cards: [] };
+        lists.value.push(newList);
         return response.data;
       }
       throw new Error(response.error || '创建列表失败');
@@ -141,15 +143,12 @@ export const useListStore = defineStore('list', () => {
       list.cards = [];
     }
     
-    // 根据 order_index 插入到正确位置（修复重复添加问题）
-    const insertIndex = lists.value.findIndex(
-      l => l.order_index > list.order_index
-    );
-    
+    // 根据 order_index 插入到正确位置
+    const insertIndex = lists.value.findIndex(l => l.order_index > list.order_index);
     if (insertIndex === -1) {
-      lists.value.push({ ...list, cards: list.cards });
+      lists.value.push(list);
     } else {
-      lists.value.splice(insertIndex, 0, { ...list, cards: list.cards });
+      lists.value.splice(insertIndex, 0, list);
     }
   };
 
