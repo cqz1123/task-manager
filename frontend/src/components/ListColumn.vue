@@ -215,7 +215,7 @@ const handleDeleteList = async () => {
       </draggable>
     </div>
 
-    <div v-if="canEdit" class="list-footer">
+    <div v-if="canEdit && !isCompletedList" class="list-footer">
       <ElButton
         type="primary"
         plain
