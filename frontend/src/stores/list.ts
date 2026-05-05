@@ -56,7 +56,9 @@ export const useListStore = defineStore('list', () => {
     try {
       const response = await listApi.createList(boardId, title);
       if (response.success && response.data) {
-        // 不直接添加到本地列表，等待广播事件更新（避免重复）
+        // 创建成功后立即添加到本地列表
+        const newList = { ...response.data, cards: [] };
+        lists.value.push(newList);
         return response.data;
       }
       throw new Error(response.error || '创建列表失败');
@@ -124,10 +126,15 @@ export const useListStore = defineStore('list', () => {
    * 广播添加列表（直接更新本地数据，不调用 API）
    */
   const addListByBroadcast = (list: ListWithCards): void => {
-    // 检查是否已存在相同 ID 的列表（避免重复）
-    const exists = lists.value.some(l => l.id === list.id);
-    if (exists) {
-      console.log('列表已存在，跳过广播更新:', list.id);
+    // 检查是否已存在相同 ID 的列表（避免重复，存在则更新）
+    const existingIndex = lists.value.findIndex(l => l.id === list.id);
+    if (existingIndex !== -1) {
+      // 更新现有列表（保持响应性）
+      const existingCards = lists.value[existingIndex]!.cards || [];
+      lists.value[existingIndex] = {
+        ...list,
+        cards: existingCards
+      };
       return;
     }
     

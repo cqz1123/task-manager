@@ -7,6 +7,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import * as cardApi from '../api/card';
 import { useBoardStore } from './board';
+import { useListStore } from './list';
 import type { Card, CardCreateData } from '../types/Card';
 import type { ListWithCards } from '../types/List';
 
@@ -42,7 +43,16 @@ export const useCardStore = defineStore('card', () => {
       const boardId = boardStore.currentBoard?.id || 0;
       const response = await cardApi.createCard(boardId, cardData);
       if (response.success && response.data) {
-        // 不直接添加到本地列表，等待广播事件更新（避免重复）
+        // 创建成功后立即添加到本地列表
+        const listStore = useListStore();
+        const lists = listStore.lists;
+        const list = lists.find(list => list.id === cardData.listId);
+        if (list) {
+          if (!list.cards) {
+            list.cards = [];
+          }
+          list.cards.push(response.data);
+        }
         return response.data;
       }
       throw new Error(response.error || '创建卡片失败');
@@ -68,7 +78,9 @@ export const useCardStore = defineStore('card', () => {
       const response = await cardApi.deleteCard(boardId, cardId);
       if (response.success) {
         // 找到对应的列表并移除卡片
-        lists.value.forEach(list => {
+        const listStore = useListStore();
+        const lists = listStore.lists;
+        lists.forEach(list => {
           list.cards = list.cards.filter((card: Card) => card.id !== cardId);
         });
       } else {
@@ -101,7 +113,9 @@ export const useCardStore = defineStore('card', () => {
       const response = await cardApi.updateCard(boardId, cardId, cardData);
       if (response.success && response.data) {
         // 找到对应的列表并更新卡片
-        lists.value.forEach(list => {
+        const listStore = useListStore();
+        const lists = listStore.lists;
+        lists.forEach(list => {
           const cardIndex = list.cards.findIndex((card: Card) => card.id === cardId);
           if (cardIndex !== -1) {
             list.cards[cardIndex] = response.data;
@@ -132,23 +146,27 @@ export const useCardStore = defineStore('card', () => {
     const { cardId, sourceListId, targetListId, newIndex } = params;
     error.value = null;
 
+    // 获取 listStore 的列表数据
+    const listStore = useListStore();
+    const lists = listStore.lists;
+
     // 备份原始数据，用于失败时回滚
-    const originalLists = JSON.parse(JSON.stringify(lists.value));
+    const originalLists = JSON.parse(JSON.stringify(lists));
 
     try {
-      // 检查lists.value是否存在
-      if (!lists.value || lists.value.length === 0) {
+      // 检查列表数据是否存在
+      if (!lists || lists.length === 0) {
         throw new Error('列表数据不存在');
       }
 
       // 找到目标列表
-      const targetListIndex = lists.value.findIndex(list => list.id === targetListId);
+      const targetListIndex = lists.findIndex(list => list.id === targetListId);
       
       if (targetListIndex === -1) {
         throw new Error('目标列表不存在');
       }
 
-      const targetList = lists.value[targetListIndex];
+      const targetList = lists[targetListIndex];
       if (!targetList) {
         throw new Error('目标列表不存在');
       }
@@ -162,8 +180,8 @@ export const useCardStore = defineStore('card', () => {
       let movedCard: Card | undefined;
       let cardFound = false;
       
-      for (let i = 0; i < lists.value.length; i++) {
-        const list = lists.value[i];
+      for (let i = 0; i < lists.length; i++) {
+        const list = lists[i];
         if (list && list.cards) {
           const index = list.cards.findIndex((card: Card) => card.id === cardId);
           if (index !== -1) {
@@ -210,7 +228,14 @@ export const useCardStore = defineStore('card', () => {
       }
     } catch (err: any) {
       // 失败时回滚到原始状态
-      lists.value = originalLists;
+      // 由于 lists 是引用，需要逐个恢复
+      for (let i = 0; i < (lists?.length || 0) && i < (originalLists?.length || 0); i++) {
+        const list = lists?.[i];
+        const original = originalLists?.[i];
+        if (list && original) {
+          list.cards = original.cards;
+        }
+      }
       error.value = err.error || '移动卡片失败';
       throw err;
     }
@@ -220,7 +245,10 @@ export const useCardStore = defineStore('card', () => {
    * 广播添加卡片（直接更新本地数据，不调用 API）
    */
   const addCardByBroadcast = (listId: number, card: Card): void => {
-    const list = lists.value.find(list => list.id === listId);
+    const listStore = useListStore();
+    const lists = listStore.lists;
+    
+    const list = lists.find(list => list.id === listId);
     if (!list) {
       return;
     }
@@ -230,10 +258,11 @@ export const useCardStore = defineStore('card', () => {
       list.cards = [];
     }
     
-    // 检查是否已存在相同 ID 的卡片（避免重复）
-    const exists = list.cards.some((c: Card) => c.id === card.id);
-    if (exists) {
-      console.log('卡片已存在，跳过广播更新:', card.id);
+    // 检查是否已存在相同 ID 的卡片（避免重复，存在则更新）
+    const existingIndex = list.cards.findIndex((c: Card) => c.id === card.id);
+    if (existingIndex !== -1) {
+      // 更新现有卡片（保持响应性）
+      list.cards[existingIndex] = card;
       return;
     }
     
@@ -253,7 +282,10 @@ export const useCardStore = defineStore('card', () => {
    * 广播更新卡片（直接更新本地数据，不调用 API）
    */
   const updateCardByBroadcast = (updatedCard: Card): void => {
-    lists.value.forEach(list => {
+    const listStore = useListStore();
+    const lists = listStore.lists;
+    
+    lists.forEach(list => {
       const cardIndex = list.cards.findIndex((card: Card) => card.id === updatedCard.id);
       if (cardIndex !== -1) {
         list.cards[cardIndex] = updatedCard;
@@ -265,7 +297,10 @@ export const useCardStore = defineStore('card', () => {
    * 广播删除卡片（直接更新本地数据，不调用 API）
    */
   const deleteCardByBroadcast = (cardId: number): void => {
-    lists.value.forEach(list => {
+    const listStore = useListStore();
+    const lists = listStore.lists;
+    
+    lists.forEach(list => {
       list.cards = list.cards.filter((card: Card) => card.id !== cardId);
     });
   };
@@ -274,11 +309,14 @@ export const useCardStore = defineStore('card', () => {
    * 广播移动卡片（直接更新本地数据，不调用 API）
    */
   const moveCardByBroadcast = (movedCard: Card): void => {
+    const listStore = useListStore();
+    const lists = listStore.lists;
+    
     // 先从原列表中移除卡片
     let removedCard: Card | null = null;
     let originalList: ListWithCards | null = null;
 
-    for (const list of lists.value) {
+    for (const list of lists) {
       if (!list || !list.cards) continue;
       
       const cardIndex = list.cards.findIndex((card: Card) => card.id === movedCard.id);
@@ -295,7 +333,7 @@ export const useCardStore = defineStore('card', () => {
     }
 
     // 找到目标列表
-    const targetList = lists.value.find(list => list.id === movedCard.list_id);
+    const targetList = lists.find(list => list.id === movedCard.list_id);
     if (!targetList) {
       // 如果目标列表不存在，把卡片放回原列表
       if (originalList && originalList.cards) {
