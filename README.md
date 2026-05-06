@@ -15,23 +15,23 @@
 
 ### 看板管理
 
-![看板列表](assets/picture/boards-list.png)
+![看板列表](screenshots/boards-list.png)
 
 ### 创建看板
 
-![创建新看板](assets/picture/create-board.png)
+![创建新看板](screenshots/create-board.png)
 
 ### 个人设置
 
-![个人设置](assets/picture/user-settings.png)
+![个人设置](screenshots/user-settings.png)
 
 ### 看板详情
 
-![看板详情](assets/picture/board-detail.png)
+![看板详情](screenshots/board-detail.png)
 
 ### 成员管理
 
-![成员管理](assets/picture/member-management.png)
+![成员管理](screenshots/member-management.png)
 
 ## 技术栈
 
