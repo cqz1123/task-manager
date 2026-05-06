@@ -11,6 +11,28 @@
 - **实时同步** - 使用 Socket.IO 实现实时数据同步
 - **个人设置** - 支持修改用户名和密码
 
+## 功能预览
+
+### 看板管理
+
+![看板列表](assets/picture/boards-list.png)
+
+### 创建看板
+
+![创建新看板](assets/picture/create-board.png)
+
+### 个人设置
+
+![个人设置](assets/picture/user-settings.png)
+
+### 看板详情
+
+![看板详情](assets/picture/board-detail.png)
+
+### 成员管理
+
+![成员管理](assets/picture/member-management.png)
+
 ## 技术栈
 
 | 分类 | 技术 | 版本 |
@@ -170,26 +192,6 @@ task-manager/
 | 编辑者 (editor) | 添加/编辑/删除列表和卡片，拖拽排序 |
 | 查看者 (viewer) | 仅查看，不可编辑，卡片只读 |
 
-## 贡献指南
+## 反馈与建议
 
-欢迎提交 Issue 和 Pull Request！
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
-
-## 许可证
-
-MIT License - 详见 LICENSE 文件
-
-## 联系方式
-
-如有问题或建议，请通过以下方式联系：
-
-- 提交 Issue: [GitHub Issues](https://github.com/yourusername/task-manager/issues)
-
----
-
-**开发团队** | Task Manager Team
+请通过 [GitHub Issues](https://github.com/yourusername/task-manager/issues) 提交问题。

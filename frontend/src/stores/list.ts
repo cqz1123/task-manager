@@ -56,9 +56,7 @@ export const useListStore = defineStore('list', () => {
     try {
       const response = await listApi.createList(boardId, title);
       if (response.success && response.data) {
-        // 创建成功后立即添加到本地列表
-        const newList = { ...response.data, cards: [] };
-        lists.value.push(newList);
+        // 等待广播事件更新本地数据，避免重复添加
         return response.data;
       }
       throw new Error(response.error || '创建列表失败');
