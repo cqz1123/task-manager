@@ -590,9 +590,6 @@ const regenerateInviteCode = async () => {
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background: #ffffff;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .invite-code-tag {
@@ -600,40 +597,51 @@ const regenerateInviteCode = async () => {
   font-family: monospace;
   font-weight: 600;
   padding: 4px 10px;
-  background: #409eff !important;
-  color: #ffffff !important;
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.9) !important;
   border: none;
-  border-radius: 4px;
+  border-radius: 0;
   letter-spacing: 2px;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+  box-shadow: none;
 }
 
 .toggle-invite-code-btn,
 .copy-invite-code-btn {
-  color: #409eff !important;
+  color: rgba(255, 255, 255, 0.9) !important;
   font-size: 12px;
   padding: 2px 6px;
 }
 
 .toggle-invite-code-btn:hover,
 .copy-invite-code-btn:hover {
-  color: #66b1ff !important;
-  background: rgba(64, 158, 255, 0.1);
+  color: white !important;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .copy-invite-code-btn.copied {
   color: #67c23a !important;
 }
 
-.back-button {
-  background-color: #0079BF !important;
-  border-color: #0079BF !important;
+.regenerate-invite-code-btn {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 12px;
+  padding: 2px 6px;
+}
+
+.regenerate-invite-code-btn:hover {
   color: white !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.back-button {
+  background: transparent !important;
+  border: none !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  padding: 4px 8px;
 }
 
 .back-button:hover {
-  background-color: #006ba6 !important;
-  border-color: #006ba6 !important;
+  background: rgba(255, 255, 255, 0.1) !important;
 }
 
 .board-title-wrapper {
@@ -675,14 +683,14 @@ const regenerateInviteCode = async () => {
 }
 
 .member-management-btn {
-  color: white !important;
-  border-color: #409eff !important;
-  background-color: #409eff !important;
+  background: transparent !important;
+  border: none !important;
+  color: rgba(255, 255, 255, 0.9) !important;
   margin-left: 8px !important;
 }
 
 .member-management-btn:hover {
-  background-color: #66b1ff !important;
+  background: rgba(255, 255, 255, 0.1) !important;
 }
 
 .main-content {
