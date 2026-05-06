@@ -184,6 +184,26 @@ task-manager/
 | PATCH | /api/boards/:boardId/members/:userId | 修改成员角色 |
 | DELETE | /api/boards/:boardId/members/:userId | 移除成员 |
 
+### 列表接口
+
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| GET | /api/boards/:boardId/lists | 获取看板列表 |
+| POST | /api/boards/:boardId/lists | 创建列表 |
+| PUT | /api/boards/:boardId/lists/:listId | 更新列表 |
+| DELETE | /api/boards/:boardId/lists/:listId | 删除列表 |
+| PUT | /api/boards/:boardId/lists/reorder | 重新排序列表 |
+
+### 卡片接口
+
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| GET | /api/boards/:boardId/lists/:listId/cards | 获取列表卡片 |
+| POST | /api/boards/:boardId/lists/:listId/cards | 创建卡片 |
+| PUT | /api/boards/:boardId/cards/:cardId | 更新卡片 |
+| DELETE | /api/boards/:boardId/cards/:cardId | 删除卡片 |
+| PUT | /api/boards/:boardId/cards/reorder | 拖拽移动卡片 |
+
 ## 角色权限说明
 
 | 角色 | 权限 |
